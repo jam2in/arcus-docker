@@ -46,7 +46,7 @@ spec:
       containers:
       - name: arcus-zk
         imagePullPolicy: Always
-        image: hjyun328/arcus-zookeeper:latest
+        image: jam2in/arcus-zookeeper:latest
         ports:
         - containerPort: 2181
           name: client

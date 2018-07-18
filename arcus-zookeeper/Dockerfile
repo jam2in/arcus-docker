@@ -2,7 +2,7 @@
 FROM arcus-ubuntu:14.04
 
 # maintainer
-MAINTAINER hjyun <hjyun328@gmail.com>
+MAINTAINER hjyun <hjyun@jam2in.com>
 
 # env
 ENV ARCUS_PATH        /usr/lib/arcus
