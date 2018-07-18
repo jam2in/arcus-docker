@@ -1,0 +1,95 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: arcus-zk-cm
+data:
+  maxClientCnxns: "100"
+  tickTime: "2000"
+  initLimit: "10"
+  syncLimit: "5"
+  minSessionTimeout: "4000"
+  maxSessionTimeout: "200000"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: arcus-zk-svc
+  labels:
+    app: arcus-zk-svc
+spec:
+  ports:
+  - port: 2181
+    name: client
+  - port: 2888
+    name: server
+  - port: 3888
+    name: leader-election
+  clusterIP: None
+  selector:
+    app: arcus-zk
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: arcus-zk
+spec:
+  serviceName: arcus-zk-svc
+  replicas: 3
+  selector:
+    matchLabels:
+      app: arcus-zk
+  template:
+    metadata:
+      labels:
+        app: arcus-zk          
+    spec:
+      containers:
+      - name: arcus-zk
+        imagePullPolicy: Always
+        image: hjyun328/arcus-zookeeper:latest
+        ports:
+        - containerPort: 2181
+          name: client
+        - containerPort: 2888
+          name: server
+        - containerPort: 3888
+          name: leader-election
+        env:
+        - name: ZOOKEEPER_CONF_SERVERS
+          value: "3"
+        - name: ZOOKEEPER_CONF_CLIENT_PORT
+          value: "2181"
+        - name: ZOOKEEPER_CONF_SERVER_PORT
+          value: "2888"
+        - name: ZOOKEEPER_CONF_LEADER_ELECTION_PORT
+          value: "3888"
+        - name: ZOOKEEPER_CONF_MAX_CLIENT_CNXNS
+          valueFrom:
+            configMapKeyRef:
+              name: arcus-zk-cm
+              key: maxClientCnxns
+        - name: ZOOKEEPER_CONF_TICK_TIME
+          valueFrom:
+            configMapKeyRef:
+              name: arcus-zk-cm
+              key: tickTime
+        - name: ZOOKEEPER_CONF_INIT_LIMIT
+          valueFrom:
+            configMapKeyRef:
+              name: arcus-zk-cm
+              key: initLimit
+        - name: ZOOKEEPER_CONF_SYNC_LIMIT
+          valueFrom:
+            configMapKeyRef:
+              name: arcus-zk-cm
+              key: syncLimit
+        - name: ZOOKEEPER_CONF_MIN_SESSION_TIMEOUT
+          valueFrom:
+            configMapKeyRef:
+              name: arcus-zk-cm
+              key: minSessionTimeout
+        - name: ZOOKEEPER_CONF_MAX_SESSION_TIMEOUT
+          valueFrom:
+            configMapKeyRef:
+              name: arcus-zk-cm
+              key: maxSessionTimeout
