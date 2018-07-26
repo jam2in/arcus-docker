@@ -1,0 +1,53 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: arcus-zk-init-cm
+data:
+  zk-init.sh: |
+    #!/bin/bash
+
+    set -e
+
+    # no need to edit
+    ZK_CLI="$ZOOKEEPER_PATH/bin/zkCli.sh"
+
+    # edit your zk address
+    ZK_ADDR="-server arcus-zk-1.arcus-zk-svc.default.svc.cluster.local:2181"
+
+    # edit your zk node
+    $ZK_CLI $ZK_ADDR create /arcus 0
+    $ZK_CLI $ZK_ADDR create /arcus/client_list 0
+    $ZK_CLI $ZK_ADDR create /arcus/client_list/test 0
+    $ZK_CLI $ZK_ADDR create /arcus/cache_list 0
+    $ZK_CLI $ZK_ADDR create /arcus/cache_list/test 0
+    $ZK_CLI $ZK_ADDR create /arcus/cache_server_mapping 0
+    $ZK_CLI $ZK_ADDR create /arcus/cache_server_mapping/10.32.9.17:11710 0
+    $ZK_CLI $ZK_ADDR create /arcus/cache_server_mapping/10.32.9.17:11710/test
+    $ZK_CLI $ZK_ADDR create /arcus/cache_server_mapping/10.32.9.17:11711 0
+    $ZK_CLI $ZK_ADDR create /arcus/cache_server_mapping/10.32.9.17:11711/test
+    $ZK_CLI $ZK_ADDR create /arcus/cache_server_mapping/10.32.9.17:11720 0
+    $ZK_CLI $ZK_ADDR create /arcus/cache_server_mapping/10.32.9.17:11720/test
+    $ZK_CLI $ZK_ADDR create /arcus/cache_server_mapping/10.32.9.17:11721 0
+    $ZK_CLI $ZK_ADDR create /arcus/cache_server_mapping/10.32.9.17:11721/test
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: arcus-zk-init-job
+spec:
+  template:
+    spec:
+      volumes:
+        - name: arcus-zk-init
+          configMap:
+            name: arcus-zk-init-cm
+            defaultMode: 0775
+      containers:
+      - name: arcus-zk-init-job
+        image: jam2in/arcus-zookeeper:latest
+        command: ["/scripts/zk-init.sh"]
+        volumeMounts:
+          - mountPath: /scripts
+            name: arcus-zk-init
+      restartPolicy: Never
+  backoffLimit: 4
