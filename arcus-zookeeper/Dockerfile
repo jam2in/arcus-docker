@@ -26,5 +26,5 @@ RUN ./build.sh
 
 # cmd
 WORKDIR $ARCUS_PATH
-COPY file/initialize.sh /
+COPY initialize.sh /
 CMD /initialize.sh && $ZOOKEEPER_PATH/bin/zkServer.sh start-foreground
