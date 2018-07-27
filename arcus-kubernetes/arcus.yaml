@@ -1,0 +1,98 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: arcus-cm-conf
+data:
+  memlimit: "100"
+  connections: "1000"
+  threads: "2"
+  ensembles: "arcus-zk-0.arcus-zk-svc.default.svc.cluster.local:2181,arcus-zk-1.arcus-zk-svc.default.svc.cluster.local:2181,arcus-zk-2.arcus-zk-svc.default.svc.cluster.local:2181"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: arcus-cm-script
+data:
+  arcus-start.sh: |
+    #!/bin/bash
+
+    set -e
+
+    $ARCUS_PATH/server/memcached -E $ARCUS_PATH/lib/default_engine.so -X $ARCUS_PATH/lib/syslog_logger.so -X $ARCUS_PATH/lib/ascii_scrub.so -d -v -r -R5 -U 0 -D: -b 8192 -m $ARCUS_CONF_MEM_LIMIT -p 11200 -c $ARCUS_CONF_CONNECTIONS -t $ARCUS_CONF_THREADS -z $ARCUS_CONF_ENSEMBLES
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: arcus-svc
+  labels:
+    app: arcus-svc
+spec:
+  ports:
+  - port: 11200
+    name: memcached
+  clusterIP: None
+  selector:
+    app: arcus
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: arcus
+spec:
+  serviceName: arcus-svc
+  replicas: 3
+  selector:
+    matchLabels:
+      app: arcus
+  template:
+    metadata:
+      labels:
+        app: arcus          
+    spec:
+      volumes:
+        - name: arcus-vol-script
+          configMap:
+            name: arcus-cm-script
+            defaultMode: 0775
+      containers:
+      - name: arcus
+        imagePullPolicy: Always
+        image: jam2in/arcus:latest
+        command: ["/scripts/arcus-start.sh"]
+        ports:
+        - containerPort: 11200
+          name: memcached
+        volumeMounts:
+          - mountPath: /scripts
+            name: arcus-vol-script
+#       readinessProbe:
+#         exec:
+#           command: ["/scripts/arcus-ok.sh"]
+#         initialDelaySeconds: 10
+#         timeoutSeconds: 5
+#       livenessProbe:
+#         exec:
+#           command: ["/scripts/arcus-ok.sh"]
+#         initialDelaySeconds: 10
+#         timeoutSeconds: 5
+        env:
+        - name: ARCUS_CONF_MEM_LIMIT
+          valueFrom:
+            configMapKeyRef:
+              name: arcus-cm-conf
+              key: memlimit
+        - name: ARCUS_CONF_CONNECTIONS
+          valueFrom:
+            configMapKeyRef:
+              name: arcus-cm-conf
+              key: connections
+        - name: ARCUS_CONF_THREADS
+          valueFrom:
+            configMapKeyRef:
+              name: arcus-cm-conf
+              key: threads
+        - name: ARCUS_CONF_ENSEMBLES
+          valueFrom:
+            configMapKeyRef:
+              name: arcus-cm-conf
+              key: ensembles

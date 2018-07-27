@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: arcus-zk-cm-env
+  name: arcus-zk-cm-conf
 data:
   maxClientCnxns: "100"
   tickTime: "2000"
@@ -140,30 +140,30 @@ spec:
         - name: ZOOKEEPER_CONF_MAX_CLIENT_CNXNS
           valueFrom:
             configMapKeyRef:
-              name: arcus-zk-cm-env
+              name: arcus-zk-cm-conf
               key: maxClientCnxns
         - name: ZOOKEEPER_CONF_TICK_TIME
           valueFrom:
             configMapKeyRef:
-              name: arcus-zk-cm-env
+              name: arcus-zk-cm-conf
               key: tickTime
         - name: ZOOKEEPER_CONF_INIT_LIMIT
           valueFrom:
             configMapKeyRef:
-              name: arcus-zk-cm-env
+              name: arcus-zk-cm-conf
               key: initLimit
         - name: ZOOKEEPER_CONF_SYNC_LIMIT
           valueFrom:
             configMapKeyRef:
-              name: arcus-zk-cm-env
+              name: arcus-zk-cm-conf
               key: syncLimit
         - name: ZOOKEEPER_CONF_MIN_SESSION_TIMEOUT
           valueFrom:
             configMapKeyRef:
-              name: arcus-zk-cm-env
+              name: arcus-zk-cm-conf
               key: minSessionTimeout
         - name: ZOOKEEPER_CONF_MAX_SESSION_TIMEOUT
           valueFrom:
             configMapKeyRef:
-              name: arcus-zk-cm-env
+              name: arcus-zk-cm-conf
               key: maxSessionTimeout
