@@ -15,7 +15,7 @@ kind: ConfigMap
 metadata:
   name: arcus-zk-cm-script
 data:
-  zk-conf-init.sh: |
+  arcus-zk-conf-init.sh: |
     #!/bin/bash
 
     set -e
@@ -54,7 +54,7 @@ data:
     }
 
     create_config && create_data
-  zk-ok.sh: |
+  arcus-zk-ok.sh: |
     #!/bin/bash
 
     OK=$(echo ruok | nc 127.0.0.1 2181)
@@ -107,7 +107,7 @@ spec:
         imagePullPolicy: Always
         image: jam2in/arcus:latest
         command: ["/bin/sh"]
-        args: ["-c", "/scripts/zk-conf-init.sh && $ZOOKEEPER_PATH/bin/zkServer.sh start-foreground"]
+        args: ["-c", "/scripts/arcus-zk-conf-init.sh && $ZOOKEEPER_PATH/bin/zkServer.sh start-foreground"]
         ports:
         - containerPort: 2181
           name: client
@@ -120,12 +120,12 @@ spec:
             name: arcus-zk-vol-script
         readinessProbe:
           exec:
-            command: ["/scripts/zk-ok.sh"]
+            command: ["/scripts/arcus-zk-ok.sh"]
           initialDelaySeconds: 10
           timeoutSeconds: 5
         livenessProbe:
           exec:
-            command: ["/scripts/zk-ok.sh"]
+            command: ["/scripts/arcus-zk-ok.sh"]
           initialDelaySeconds: 10
           timeoutSeconds: 5
         env:
