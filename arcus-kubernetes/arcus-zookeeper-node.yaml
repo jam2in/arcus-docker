@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: arcus-zk-init-cm
+  name: arcus-zk-cm-node
 data:
-  zk-init.sh: |
+  zk-node.sh: |
     #!/bin/bash
 
     set -e
@@ -33,21 +33,21 @@ data:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: arcus-zk-init-job
+  name: arcus-zk-job-node
 spec:
   template:
     spec:
       volumes:
-        - name: arcus-zk-init
+        - name: arcus-zk-vol-node
           configMap:
-            name: arcus-zk-init-cm
+            name: arcus-zk-cm-node
             defaultMode: 0775
       containers:
-      - name: arcus-zk-init-job
-        image: jam2in/arcus-zookeeper:latest
-        command: ["/scripts/zk-init.sh"]
+      - name: arcus-zk-job-node
+        image: jam2in/arcus:latest
+        command: ["/scripts/zk-node.sh"]
         volumeMounts:
           - mountPath: /scripts
-            name: arcus-zk-init
+            name: arcus-zk-vol-node
       restartPolicy: Never
   backoffLimit: 4

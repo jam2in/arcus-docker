@@ -13,7 +13,7 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: arcus-zk-cm-conf
+  name: arcus-zk-cm-script
 data:
   zk-conf-init.sh: |
     #!/bin/bash
@@ -54,6 +54,15 @@ data:
     }
 
     create_config && create_data
+  zk-ok.sh: |
+    #!/bin/bash
+
+    OK=$(echo ruok | nc 127.0.0.1 2181)
+    if [ "$OK" == "imok" ]; then
+        exit 0
+    else
+        exit 1
+    fi
 ---
 apiVersion: v1
 kind: Service
@@ -89,9 +98,9 @@ spec:
         app: arcus-zk          
     spec:
       volumes:
-        - name: arcus-zk-vol-conf
+        - name: arcus-zk-vol-script
           configMap:
-            name: arcus-zk-cm-conf
+            name: arcus-zk-cm-script
             defaultMode: 0775
       containers:
       - name: arcus-zk
@@ -108,7 +117,17 @@ spec:
           name: leader-election
         volumeMounts:
           - mountPath: /scripts
-            name: arcus-zk-vol-conf
+            name: arcus-zk-vol-script
+        readinessProbe:
+          exec:
+            command: ["/scripts/zk-ok.sh"]
+          initialDelaySeconds: 10
+          timeoutSeconds: 5
+        livenessProbe:
+          exec:
+            command: ["/scripts/zk-ok.sh"]
+          initialDelaySeconds: 10
+          timeoutSeconds: 5
         env:
         - name: ZOOKEEPER_CONF_SERVERS
           value: "3"
