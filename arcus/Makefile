@@ -1,4 +1,4 @@
-IMAGE=jam2in/arcus-ubuntu:14.04
+IMAGE=jam2in/arcus:latest
 
 build:
 	docker build -t ${IMAGE} .

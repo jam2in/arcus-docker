@@ -1,5 +1,5 @@
 # image
-FROM arcus-ubuntu:14.04
+FROM jam2in/arcus-ubuntu:14.04
 
 # maintainer
 MAINTAINER hjyun <hjyun@jam2in.com>
@@ -23,8 +23,4 @@ RUN chown -R $ARCUS_USER:$ARCUS_USER $ARCUS_PATH
 USER $ARCUS_USER
 WORKDIR $ARCUS_PATH/scripts
 RUN ./build.sh
-
-# cmd
 WORKDIR $ARCUS_PATH
-COPY initialize.sh /
-CMD /initialize.sh && $ZOOKEEPER_PATH/bin/zkServer.sh start-foreground

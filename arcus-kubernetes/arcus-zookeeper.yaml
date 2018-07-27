@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: arcus-zk-cm
+  name: arcus-zk-cm-env
 data:
   maxClientCnxns: "100"
   tickTime: "2000"
@@ -9,6 +9,51 @@ data:
   syncLimit: "5"
   minSessionTimeout: "4000"
   maxSessionTimeout: "200000"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: arcus-zk-cm-conf
+data:
+  zk-conf-init.sh: |
+    #!/bin/bash
+
+    set -e
+
+    ZOOKEEPER_CONF=$ZOOKEEPER_PATH/conf/zoo.cfg
+    ZOOKEEPER_DATA=$ZOOKEEPER_PATH/data/myid
+
+    HOST_NAME_SHORT=`hostname -s`
+    HOST_NAME_DOMAIN=`hostname -d`
+    if [[ $HOST_NAME_SHORT =~ (.*)-([0-9]+)$ ]]; then
+        HOST_NAME=${BASH_REMATCH[1]}
+        HOST_ORG=${BASH_REMATCH[2]}
+    fi
+
+    function create_config() {
+        mkdir -p $ZOOKEEPER_PATH/conf
+        rm -f $ZOOKEEPER_CONF
+        echo "maxClientCnxns=$ZOOKEEPER_CONF_MAX_CLIENT_CNXNS"       >> $ZOOKEEPER_CONF
+        echo "tickTime=$ZOOKEEPER_CONF_TICK_TIME"                    >> $ZOOKEEPER_CONF
+        echo "initLimit=$ZOOKEEPER_CONF_INIT_LIMIT"                  >> $ZOOKEEPER_CONF
+        echo "syncLimit=$ZOOKEEPER_CONF_SYNC_LIMIT"                  >> $ZOOKEEPER_CONF
+        echo "dataDir=$ZOOKEEPER_PATH/data"                          >> $ZOOKEEPER_CONF
+        echo "clientPort=$ZOOKEEPER_CONF_CLIENT_PORT"                >> $ZOOKEEPER_CONF
+        echo "minSessionTimeout=$ZOOKEEPER_CONF_MIN_SESSION_TIMEOUT" >> $ZOOKEEPER_CONF
+        echo "maxSessionTimeout=$ZOOKEEPER_CONF_MAX_SESSION_TIMEOUT" >> $ZOOKEEPER_CONF
+
+        for (( i=0; i<$ZOOKEEPER_CONF_SERVERS; i++ ))
+        do
+            echo "server.$((i+1))=$HOST_NAME-$i.$HOST_NAME_DOMAIN:$ZOOKEEPER_CONF_SERVER_PORT:$ZOOKEEPER_CONF_LEADER_ELECTION_PORT" >> $ZOOKEEPER_CONF
+        done
+    }
+
+    function create_data() {
+        mkdir -p $ZOOKEEPER_PATH/data
+        echo "$((HOST_ORG+1))" > $ZOOKEEPER_DATA
+    }
+
+    create_config && create_data
 ---
 apiVersion: v1
 kind: Service
@@ -43,10 +88,17 @@ spec:
       labels:
         app: arcus-zk          
     spec:
+      volumes:
+        - name: arcus-zk-vol-conf
+          configMap:
+            name: arcus-zk-cm-conf
+            defaultMode: 0775
       containers:
       - name: arcus-zk
         imagePullPolicy: Always
-        image: jam2in/arcus-zookeeper:latest
+        image: jam2in/arcus:latest
+        command: ["/bin/sh"]
+        args: ["-c", "/scripts/zk-conf-init.sh && $ZOOKEEPER_PATH/bin/zkServer.sh start-foreground"]
         ports:
         - containerPort: 2181
           name: client
@@ -54,6 +106,9 @@ spec:
           name: server
         - containerPort: 3888
           name: leader-election
+        volumeMounts:
+          - mountPath: /scripts
+            name: arcus-zk-vol-conf
         env:
         - name: ZOOKEEPER_CONF_SERVERS
           value: "3"
@@ -66,30 +121,30 @@ spec:
         - name: ZOOKEEPER_CONF_MAX_CLIENT_CNXNS
           valueFrom:
             configMapKeyRef:
-              name: arcus-zk-cm
+              name: arcus-zk-cm-env
               key: maxClientCnxns
         - name: ZOOKEEPER_CONF_TICK_TIME
           valueFrom:
             configMapKeyRef:
-              name: arcus-zk-cm
+              name: arcus-zk-cm-env
               key: tickTime
         - name: ZOOKEEPER_CONF_INIT_LIMIT
           valueFrom:
             configMapKeyRef:
-              name: arcus-zk-cm
+              name: arcus-zk-cm-env
               key: initLimit
         - name: ZOOKEEPER_CONF_SYNC_LIMIT
           valueFrom:
             configMapKeyRef:
-              name: arcus-zk-cm
+              name: arcus-zk-cm-env
               key: syncLimit
         - name: ZOOKEEPER_CONF_MIN_SESSION_TIMEOUT
           valueFrom:
             configMapKeyRef:
-              name: arcus-zk-cm
+              name: arcus-zk-cm-env
               key: minSessionTimeout
         - name: ZOOKEEPER_CONF_MAX_SESSION_TIMEOUT
           valueFrom:
             configMapKeyRef:
-              name: arcus-zk-cm
+              name: arcus-zk-cm-env
               key: maxSessionTimeout
