@@ -32,22 +32,22 @@ spec:
     name: memcached
   clusterIP: None
   selector:
-    app: arcus
+    app: arcus-memcached
 ---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: arcus
+  name: arcus-memcached
 spec:
   serviceName: arcus-memcached-svc
   replicas: 3
   selector:
     matchLabels:
-      app: arcus
+      app: arcus-memcached
   template:
     metadata:
       labels:
-        app: arcus          
+        app: arcus-memcached 
     spec:
       volumes:
         - name: arcus-memcached-vol-script
