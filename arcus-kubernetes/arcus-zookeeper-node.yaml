@@ -21,14 +21,8 @@ data:
     $ZK_CLI $ZK_ADDR create /arcus/cache_list 0
     $ZK_CLI $ZK_ADDR create /arcus/cache_list/test 0
     $ZK_CLI $ZK_ADDR create /arcus/cache_server_mapping 0
-    $ZK_CLI $ZK_ADDR create /arcus/cache_server_mapping/10.32.9.17:11710 0
-    $ZK_CLI $ZK_ADDR create /arcus/cache_server_mapping/10.32.9.17:11710/test
-    $ZK_CLI $ZK_ADDR create /arcus/cache_server_mapping/10.32.9.17:11711 0
-    $ZK_CLI $ZK_ADDR create /arcus/cache_server_mapping/10.32.9.17:11711/test
-    $ZK_CLI $ZK_ADDR create /arcus/cache_server_mapping/10.32.9.17:11720 0
-    $ZK_CLI $ZK_ADDR create /arcus/cache_server_mapping/10.32.9.17:11720/test
-    $ZK_CLI $ZK_ADDR create /arcus/cache_server_mapping/10.32.9.17:11721 0
-    $ZK_CLI $ZK_ADDR create /arcus/cache_server_mapping/10.32.9.17:11721/test
+    $ZK_CLI $ZK_ADDR create /arcus/cache_server_mapping/arcus-memcached-0.arcus-memcached-svc.default.svc.cluster.local:11200 0
+    $ZK_CLI $ZK_ADDR create /arcus/cache_server_mapping/arcus-memcached-0.arcus-memcached-svc.default.svc.cluster.local:11200/test
 ---
 apiVersion: batch/v1
 kind: Job
