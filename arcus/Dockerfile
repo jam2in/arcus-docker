@@ -16,7 +16,7 @@ RUN echo "$ARCUS_USER:$ARCUS_USER" : chpasswd
 
 # download arcus
 WORKDIR /usr/lib
-RUN git clone https://github.com/naver/arcus.git
+RUN git clone https://github.com/hjyun328/arcus.git
 RUN chown -R $ARCUS_USER:$ARCUS_USER $ARCUS_PATH
 
 # build arcus
