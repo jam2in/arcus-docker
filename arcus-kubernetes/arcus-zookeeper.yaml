@@ -121,13 +121,13 @@ spec:
         readinessProbe:
           exec:
             command: ["/scripts/arcus-zk-ok.sh"]
-          initialDelaySeconds: 10
-          timeoutSeconds: 5
+          initialDelaySeconds: 30
+          timeoutSeconds: 15
         livenessProbe:
           exec:
             command: ["/scripts/arcus-zk-ok.sh"]
-          initialDelaySeconds: 10
-          timeoutSeconds: 5
+          initialDelaySeconds: 30
+          timeoutSeconds: 15
         env:
         - name: ZOOKEEPER_CONF_SERVERS
           value: "3"
