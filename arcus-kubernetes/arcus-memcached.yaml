@@ -18,7 +18,7 @@ data:
 
     set -e
 
-    $ARCUS_PATH/server/memcached -E $ARCUS_PATH/lib/default_engine.so -X $ARCUS_PATH/lib/syslog_logger.so -X $ARCUS_PATH/lib/ascii_scrub.so -d -v -r -R5 -U 0 -D: -b 8192 -m $ARCUS_CONF_MEM_LIMIT -p 11200 -c $ARCUS_CONF_CONNECTIONS -t $ARCUS_CONF_THREADS -z $ARCUS_CONF_ENSEMBLES
+    $ARCUS_PATH/server/memcached -E $ARCUS_PATH/lib/default_engine.so -X $ARCUS_PATH/lib/syslog_logger.so -X $ARCUS_PATH/lib/ascii_scrub.so -v -r -R5 -U 0 -D: -b 8192 -m $ARCUS_CONF_MEM_LIMIT -p 11200 -c $ARCUS_CONF_CONNECTIONS -t $ARCUS_CONF_THREADS -z $ARCUS_CONF_ENSEMBLES
 ---
 apiVersion: v1
 kind: Service
@@ -40,7 +40,7 @@ metadata:
   name: arcus-memcached
 spec:
   serviceName: arcus-memcached-svc
-  replicas: 1
+  replicas: 3
   selector:
     matchLabels:
       app: arcus-memcached
