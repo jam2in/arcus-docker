@@ -8,6 +8,4 @@ memcached:
 	kubectl apply -f arcus-memcached.yaml
 
 clean:
-	kubectl delete -f arcus-zookeeper-node.yaml
-	kubectl delete -f arcus-memcached.yaml
-	kubectl delete -f arcus-zookeeper.yaml 
+	kubectl delete -f arcus-zookeeper-node.yaml; kubectl delete -f arcus-memcached.yaml; kubectl delete -f arcus-zookeeper.yaml 
