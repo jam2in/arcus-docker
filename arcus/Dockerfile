@@ -14,6 +14,10 @@ RUN useradd -d $ARCUS_PATH -c ARCUS -s /bin/bash $ARCUS_USER
 RUN rm -rf $ARCUS_PATH/*
 RUN echo "$ARCUS_USER:$ARCUS_USER" : chpasswd
 
+# user password
+RUN echo "root:root" | chpasswd
+RUN echo "$ARCUS_USER:$ARCUS_USER" | chpasswd
+
 # download arcus
 WORKDIR /usr/lib
 RUN git clone https://github.com/hjyun328/arcus.git
