@@ -1,3 +1,8 @@
+# step0) make clean
+# step1) make zk
+# step2) make zknode
+# step3) make memcached
+
 zk:
 	kubectl apply -f arcus-zookeeper.yaml
 
