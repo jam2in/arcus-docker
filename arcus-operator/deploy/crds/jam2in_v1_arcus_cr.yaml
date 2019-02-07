@@ -1,0 +1,12 @@
+apiVersion: jam2in.com/v1
+kind: Arcus
+metadata:
+  name: arcus
+spec:
+  zkReplicas: 3
+  zkMaxClientCnxns: 100
+  zkTickTime: 2000
+  zkInitLimit: 10
+  zkSyncLimit: 5
+  zkMinSessionTimeout: 4000
+  zkMaxSessionTimeout: 200000
