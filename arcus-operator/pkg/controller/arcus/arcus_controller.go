@@ -5,6 +5,7 @@ import (
 
 	"github.com/go-logr/logr"
 	jam2inv1 "github.com/jam2in/arcus-operator/pkg/apis/jam2in/v1"
+	"github.com/jam2in/arcus-operator/pkg/global"
 	"github.com/jam2in/arcus-operator/pkg/object"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -44,6 +45,14 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	err = c.Watch(&source.Kind{Type: &corev1.ConfigMap{}}, &handler.EnqueueRequestForOwner{
+		IsController: true,
+		OwnerType:    &jam2inv1.Arcus{},
+	})
+	if err != nil {
+		return err
+	}
+
+	err = c.Watch(&source.Kind{Type: &corev1.Service{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
 		OwnerType:    &jam2inv1.Arcus{},
 	})
@@ -95,6 +104,11 @@ func (r *ReconcileArcus) Reconcile(request reconcile.Request) (reconcile.Result,
 		return reconcile.Result{}, err
 	}
 
+	err = r.reconcileZkHeadlessService(arcus)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
 	return reconcile.Result{}, nil
 	/*
 		// Define a new Pod object
@@ -128,6 +142,9 @@ func (r *ReconcileArcus) Reconcile(request reconcile.Request) (reconcile.Result,
 }
 
 func (r *ReconcileArcus) reconcileArcus(arcus *jam2inv1.Arcus, request *reconcile.Request) (*reconcile.Result, error) {
+	namespace := arcus.Namespace
+	name := arcus.Name
+
 	err := r.client.Get(context.TODO(), request.NamespacedName, arcus)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -143,8 +160,8 @@ func (r *ReconcileArcus) reconcileArcus(arcus *jam2inv1.Arcus, request *reconcil
 		r.log.Info("Setting default settings for Arcus.")
 		if err := r.client.Update(context.TODO(), arcus); err != nil {
 			r.log.Error(err, "Failed to update Arcus.",
-				"Arcus.Namespace", arcus.Namespace,
-				"Arcus.Name", arcus.Name)
+				"Arcus.Namespace", namespace,
+				"Arcus.Name", name)
 			return &reconcile.Result{}, err
 		}
 		return &reconcile.Result{Requeue: true}, nil
@@ -153,49 +170,105 @@ func (r *ReconcileArcus) reconcileArcus(arcus *jam2inv1.Arcus, request *reconcil
 }
 
 func (r *ReconcileArcus) reconcileConfigMap(arcus *jam2inv1.Arcus) error {
+	namespace := arcus.Namespace
+	name := global.ObjectNameConfigMap
+
 	newConfigMap := object.CreateConfigMap(arcus)
 	oldConfigMap := &corev1.ConfigMap{}
+
 	err := r.client.Get(context.TODO(), types.NamespacedName{
-		Namespace: arcus.Namespace,
-		Name:      object.ObjectNameConfigMap,
+		Namespace: namespace,
+		Name:      name,
 	}, oldConfigMap)
 	if err != nil {
 		if !errors.IsNotFound(err) {
 			r.log.Error(err, "Failed to get ConfigMap.",
-				"ConfigMap.Namespace", arcus.Namespace,
-				"ConfigMap.Name", object.ObjectNameConfigMap)
+				"ConfigMap.Namespace", namespace,
+				"ConfigMap.Name", name)
 			return err
 		}
 		err = controllerutil.SetControllerReference(arcus, newConfigMap, r.scheme)
 		if err != nil {
 			r.log.Error(err, "Failed to set controller reference for ConfigMap.",
-				"ConfigMap.Namespace", arcus.Namespace,
-				"ConfigMap.Name", object.ObjectNameConfigMap)
+				"ConfigMap.Namespace", namespace,
+				"ConfigMap.Name", name)
 			return err
 		}
 		r.log.Info("Creating a new ConfigMap",
-			"ConfigMap.Namespace", arcus.Namespace,
-			"ConfigMap.Name", object.ObjectNameConfigMap)
+			"ConfigMap.Namespace", namespace,
+			"ConfigMap.Name", name)
 		err = r.client.Create(context.TODO(), newConfigMap)
 		if err != nil {
 			r.log.Error(err, "Failed to create ConfigMap.",
-				"ConfigMap.Namespace", arcus.Namespace,
-				"ConfigMap.Name", object.ObjectNameConfigMap)
+				"ConfigMap.Namespace", namespace,
+				"ConfigMap.Name", name)
 			return err
 		}
 		return nil
 	}
 	r.log.Info("Updating the existing ConfigMap",
-		"ConfigMap.Namespace", arcus.Namespace,
-		"ConfigMap.Name", object.ObjectNameConfigMap)
+		"ConfigMap.Namespace", namespace,
+		"ConfigMap.Name", name)
 	object.SynchronizeConfigMap(oldConfigMap, newConfigMap)
 	err = r.client.Update(context.TODO(), oldConfigMap)
 	if err != nil {
 		r.log.Error(err, "Failed to update ConfigMap.",
-			"ConfigMap.Namespace", arcus.Namespace,
-			"ConfigMap.Name", object.ObjectNameConfigMap)
+			"ConfigMap.Namespace", namespace,
+			"ConfigMap.Name", name)
 		return err
 	}
+	return nil
+}
+
+func (r *ReconcileArcus) reconcileZkHeadlessService(arcus *jam2inv1.Arcus) error {
+	namespace := arcus.Namespace
+	name := global.ObjectNameZkHeadlessService
+
+	newService := object.CreateZkHeadlessService(arcus)
+	oldService := &corev1.Service{}
+
+	err := r.client.Get(context.TODO(), types.NamespacedName{
+		Namespace: namespace,
+		Name:      name,
+	}, oldService)
+	if err != nil {
+		if !errors.IsNotFound(err) {
+			r.log.Error(err, "Failed to get Service.",
+				"Service.Namespace", namespace,
+				"Service.Name", name)
+			return err
+		}
+		err = controllerutil.SetControllerReference(arcus, newService, r.scheme)
+		if err != nil {
+			r.log.Error(err, "Failed to set controller reference for Service.",
+				"Service.Namespace", namespace,
+				"Service.Name", name)
+			return err
+		}
+		r.log.Info("Creating a new Service",
+			"Service.Namespace", namespace,
+			"Service.Name", name)
+		err = r.client.Create(context.TODO(), newService)
+		if err != nil {
+			r.log.Error(err, "Failed to create Service.",
+				"Service.Namespace", namespace,
+				"Service.Name", name)
+			return err
+		}
+		return nil
+	}
+	r.log.Info("Updating the existing Service",
+		"Service.Namespace", namespace,
+		"Service.Name", name)
+	object.SynchronizeService(oldService, newService)
+	err = r.client.Update(context.TODO(), oldService)
+	if err != nil {
+		r.log.Error(err, "Failed to update Service.",
+			"Service.Namespace", namespace,
+			"Service.Name", name)
+		return err
+	}
+
 	return nil
 }
 

@@ -12,6 +12,7 @@ push:
 		kubectl delete deployment --all
 		kubectl delete pod --all
 		kubectl delete configmap --all
+		kubectl delete service --all
 		kubectl delete arcus --all
 
 operator:
@@ -19,6 +20,9 @@ operator:
 
 arcus:
 		kubectl apply -f deploy/crds/jam2in_v1_arcus_cr.yaml
+
+log:
+		kubectl logs -f $(shell kubectl get pods | awk 'FNR==2{print $$1}')
 
 generate:
 		operator-sdk generate k8s

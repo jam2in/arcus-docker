@@ -3,6 +3,13 @@ kind: Arcus
 metadata:
   name: arcus
 spec:
+  ports:
+  - containerPort: 2181
+    name: arcus-zk-client
+  - containerPort: 2888
+    name: arcus-zk-server
+  - containerPort: 3888
+    name: arcus-zk-leader-election
   zkReplicas: 3
   zkMaxClientCnxns: 100
   zkTickTime: 2000
