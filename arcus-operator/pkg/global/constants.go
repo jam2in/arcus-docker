@@ -13,7 +13,7 @@ const (
 )
 
 const (
-	PortNameZkClient         = "zk-client"
-	PortNameZkServer         = "zk-server"
-	PortNameZkLeaderElection = "zk-leader-election"
+	PortNameZkClient         = "arcus-zk-client"
+	PortNameZkServer         = "arcus-zk-server"
+	PortNameZkLeaderElection = "arcus-zk-leader-election"
 )
