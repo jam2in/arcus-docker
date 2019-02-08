@@ -5,8 +5,7 @@ import (
 
 	"github.com/go-logr/logr"
 	jam2inv1 "github.com/jam2in/arcus-operator/pkg/apis/jam2in/v1"
-	"github.com/jam2in/arcus-operator/pkg/global"
-	"github.com/jam2in/arcus-operator/pkg/object"
+	"github.com/jam2in/arcus-operator/pkg/util"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -109,36 +108,12 @@ func (r *ReconcileArcus) Reconcile(request reconcile.Request) (reconcile.Result,
 		return reconcile.Result{}, err
 	}
 
+	err = r.reconcileZkStatefulSet(arcus)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
 	return reconcile.Result{}, nil
-	/*
-		// Define a new Pod object
-		pod := newPodForCR(instance)
-
-		// Set Arcus instance as the owner and controller
-		if err := controllerutil.SetControllerReference(instance, pod, r.scheme); err != nil {
-			return reconcile.Result{}, err
-		}
-
-		// Check if this Pod already exists
-		found := &corev1.Pod{}
-		err = r.client.Get(context.TODO(), types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, found)
-		if err != nil && errors.IsNotFound(err) {
-			r.log.Info("Creating a new Pod", "Pod.Namespace", pod.Namespace, "Pod.Name", pod.Name)
-			err = r.client.Create(context.TODO(), pod)
-			if err != nil {
-				return reconcile.Result{}, err
-			}
-
-			// Pod created successfully - don't requeue
-			return reconcile.Result{}, nil
-		} else if err != nil {
-			return reconcile.Result{}, err
-		}
-
-		// Pod already exists - don't requeue
-		r.log.Info("Skip reconcile: Pod already exists", "Pod.Namespace", found.Namespace, "Pod.Name", found.Name)
-		return reconcile.Result{}, nil
-	*/
 }
 
 func (r *ReconcileArcus) reconcileArcus(arcus *jam2inv1.Arcus, request *reconcile.Request) (*reconcile.Result, error) {
@@ -171,9 +146,9 @@ func (r *ReconcileArcus) reconcileArcus(arcus *jam2inv1.Arcus, request *reconcil
 
 func (r *ReconcileArcus) reconcileConfigMap(arcus *jam2inv1.Arcus) error {
 	namespace := arcus.Namespace
-	name := global.ObjectNameConfigMap
+	name := jam2inv1.GetObjectNameConfigMap(arcus)
 
-	newConfigMap := object.CreateConfigMap(arcus)
+	newConfigMap := jam2inv1.CreateConfigMap(arcus)
 	oldConfigMap := &corev1.ConfigMap{}
 
 	err := r.client.Get(context.TODO(), types.NamespacedName{
@@ -209,7 +184,7 @@ func (r *ReconcileArcus) reconcileConfigMap(arcus *jam2inv1.Arcus) error {
 	r.log.Info("Updating the existing ConfigMap",
 		"ConfigMap.Namespace", namespace,
 		"ConfigMap.Name", name)
-	object.SynchronizeConfigMap(oldConfigMap, newConfigMap)
+	util.SynchronizeConfigMap(oldConfigMap, newConfigMap)
 	err = r.client.Update(context.TODO(), oldConfigMap)
 	if err != nil {
 		r.log.Error(err, "Failed to update ConfigMap.",
@@ -222,9 +197,9 @@ func (r *ReconcileArcus) reconcileConfigMap(arcus *jam2inv1.Arcus) error {
 
 func (r *ReconcileArcus) reconcileZkHeadlessService(arcus *jam2inv1.Arcus) error {
 	namespace := arcus.Namespace
-	name := global.ObjectNameZkHeadlessService
+	name := jam2inv1.GetObjectNameZkHeadlessService(arcus)
 
-	newService := object.CreateZkHeadlessService(arcus)
+	newService := jam2inv1.CreateZkHeadlessService(arcus)
 	oldService := &corev1.Service{}
 
 	err := r.client.Get(context.TODO(), types.NamespacedName{
@@ -260,7 +235,7 @@ func (r *ReconcileArcus) reconcileZkHeadlessService(arcus *jam2inv1.Arcus) error
 	r.log.Info("Updating the existing Service",
 		"Service.Namespace", namespace,
 		"Service.Name", name)
-	object.SynchronizeService(oldService, newService)
+	util.SynchronizeService(oldService, newService)
 	err = r.client.Update(context.TODO(), oldService)
 	if err != nil {
 		r.log.Error(err, "Failed to update Service.",
@@ -269,6 +244,57 @@ func (r *ReconcileArcus) reconcileZkHeadlessService(arcus *jam2inv1.Arcus) error
 		return err
 	}
 
+	return nil
+}
+
+func (r *ReconcileArcus) reconcileZkStatefulSet(arcus *jam2inv1.Arcus) error {
+	namespace := arcus.Namespace
+	name := jam2inv1.GetObjectNameZkStatefulSet(arcus)
+
+	newStatefulSet := jam2inv1.CreateZkStatefulSet(arcus)
+	oldStatefulSet := &appsv1.StatefulSet{}
+
+	err := r.client.Get(context.TODO(), types.NamespacedName{
+		Namespace: namespace,
+		Name:      name,
+	}, oldStatefulSet)
+	if err != nil {
+		if !errors.IsNotFound(err) {
+			r.log.Error(err, "Failed to get StatefulSet.",
+				"StatefulSet.Namespace", namespace,
+				"StatefulSet.Name", name)
+			return err
+		}
+		err = controllerutil.SetControllerReference(arcus, newStatefulSet, r.scheme)
+		if err != nil {
+			r.log.Error(err, "Failed to set controller reference for StatefulSet.",
+				"StatefulSet.Namespace", namespace,
+				"StatefulSet.Name", name)
+			return err
+		}
+		r.log.Info("Creating a new StatefulSet",
+			"StatefulSet.Namespace", namespace,
+			"StatefulSet.Name", name)
+		err = r.client.Create(context.TODO(), newStatefulSet)
+		if err != nil {
+			r.log.Error(err, "Failed to create StatefulSet.",
+				"StatefulSet.Namespace", namespace,
+				"StatefulSet.Name", name)
+			return err
+		}
+		return nil
+	}
+	r.log.Info("Updating the existing StatefulSet",
+		"StatefulSet.Namespace", namespace,
+		"StatefulSet.Name", name)
+	util.SynchronizeStatefulSet(oldStatefulSet, newStatefulSet)
+	err = r.client.Update(context.TODO(), oldStatefulSet)
+	if err != nil {
+		r.log.Error(err, "Failed to update StatefulSet.",
+			"StatefulSet.Namespace", namespace,
+			"StatefulSet.Name", name)
+		return err
+	}
 	return nil
 }
 

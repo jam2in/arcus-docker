@@ -1,4 +1,4 @@
-package global
+package v1
 
 //==============================================================================
 // Constants
@@ -8,12 +8,11 @@ const (
 )
 
 const (
-	ObjectNameConfigMap         = "arcus-cm"
-	ObjectNameZkHeadlessService = "arcus-zk-headless-svc"
-)
-
-const (
 	PortNameZkClient         = "arcus-zk-client"
 	PortNameZkServer         = "arcus-zk-server"
 	PortNameZkLeaderElection = "arcus-zk-leader-election"
+)
+
+const (
+	ZkVolumeMountPath = "/scripts"
 )

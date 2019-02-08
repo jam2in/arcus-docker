@@ -3,17 +3,15 @@ kind: Arcus
 metadata:
   name: arcus
 spec:
-  ports:
-  - containerPort: 2181
-    name: arcus-zk-client
-  - containerPort: 2888
-    name: arcus-zk-server
-  - containerPort: 3888
-    name: arcus-zk-leader-election
-  zkReplicas: 3
-  zkMaxClientCnxns: 100
-  zkTickTime: 2000
-  zkInitLimit: 10
-  zkSyncLimit: 5
-  zkMinSessionTimeout: 4000
-  zkMaxSessionTimeout: 200000
+  zookeeper:
+    replicas: 3
+    maxClientCnxns: 100
+    tickTime: 2000
+    initLimit: 10
+    syncLimit: 5
+    minSessionTimeout: 4000
+    maxSessionTimeout: 200000
+    ports:
+      client: 2181
+      server: 2888
+      leaderElection: 3888

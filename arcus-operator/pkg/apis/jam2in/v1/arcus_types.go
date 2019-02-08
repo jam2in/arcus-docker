@@ -1,8 +1,6 @@
 package v1
 
 import (
-	"github.com/jam2in/arcus-operator/pkg/global"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -28,16 +26,7 @@ const (
 // ArcusSpec
 //==============================================================================
 type ArcusSpec struct {
-	ZkReplicas int32 `json:"zkReplicas"`
-
-	ZkMaxClientCnxns    int32 `json:"zkMaxClientCnxns"`
-	ZkTickTime          int32 `json:"zkTickTime"`
-	ZkInitLimit         int32 `json:"zkInitLimit"`
-	ZkSyncLimit         int32 `json:"zkSyncLimit"`
-	ZkMinSessionTimeout int32 `json:"zkMinSessionTimeout"`
-	ZkMaxSessionTimeout int32 `json:"zkMaxSessionTimeout"`
-
-	Ports []corev1.ContainerPort `json:"ports,omitempty"`
+	Zookeeper ZookeeperConfig `json:"zookeeper,omitempty"`
 }
 
 //==============================================================================
@@ -58,96 +47,7 @@ type Arcus struct {
 }
 
 func (arcus *Arcus) WithDefaults() (changed bool) {
-	newPorts := arcus.Spec.Ports
-	arcus.Spec.Ports = []corev1.ContainerPort{
-		{
-			Name:          global.PortNameZkClient,
-			ContainerPort: DefaultZkClientPort,
-		},
-		{
-			Name:          global.PortNameZkServer,
-			ContainerPort: DefaultZkServerPort,
-		},
-		{
-			Name:          global.PortNameZkLeaderElection,
-			ContainerPort: DefaultZkLeaderElectionPort,
-		},
-	}
-	for portIdx := range arcus.Spec.Ports {
-		foundPortName := false
-		for newPortIdx := range newPorts {
-			if arcus.Spec.Ports[portIdx].Name == newPorts[newPortIdx].Name {
-				foundPortName = true
-				arcus.Spec.Ports[portIdx].ContainerPort = newPorts[newPortIdx].ContainerPort
-				break
-			}
-		}
-		if !foundPortName {
-			changed = true
-		}
-	}
-
-	if arcus.Spec.ZkReplicas == 0 {
-		changed = true
-		arcus.Spec.ZkReplicas = DefaultZkReplicas
-	}
-	if arcus.Spec.ZkMaxClientCnxns == 0 {
-		changed = true
-		arcus.Spec.ZkMaxClientCnxns = DefaultZkMaxClientCnxns
-	}
-	if arcus.Spec.ZkTickTime == 0 {
-		changed = true
-		arcus.Spec.ZkTickTime = DefaultZkTickTime
-	}
-	if arcus.Spec.ZkInitLimit == 0 {
-		changed = true
-		arcus.Spec.ZkInitLimit = DefaultZkInitLimit
-	}
-	if arcus.Spec.ZkSyncLimit == 0 {
-		changed = true
-		arcus.Spec.ZkSyncLimit = DefaultZkSyncLimit
-	}
-	if arcus.Spec.ZkMinSessionTimeout == 0 {
-		changed = true
-		arcus.Spec.ZkMinSessionTimeout = DefaultZkMinSessionTimeout
-	}
-	if arcus.Spec.ZkMaxSessionTimeout == 0 {
-		changed = true
-		arcus.Spec.ZkMaxSessionTimeout = DefaultZkMaxSessionTimeout
-	}
-	return changed
-}
-
-func (arcus *Arcus) GetZkServicePorts() []corev1.ServicePort {
-	zkClientPort := int32(DefaultZkClientPort)
-	zkServerPort := int32(DefaultZkServerPort)
-	zkLeaderElectionPort := int32(DefaultZkLeaderElectionPort)
-
-	for _, port := range arcus.Spec.Ports {
-		switch port.Name {
-		case global.PortNameZkClient:
-			zkClientPort = port.ContainerPort
-		case global.PortNameZkServer:
-			zkServerPort = port.ContainerPort
-		case global.PortNameZkLeaderElection:
-			zkLeaderElectionPort = port.ContainerPort
-		}
-	}
-
-	return []corev1.ServicePort{
-		{
-			Name: global.PortNameZkClient,
-			Port: zkClientPort,
-		},
-		{
-			Name: global.PortNameZkServer,
-			Port: zkServerPort,
-		},
-		{
-			Name: global.PortNameZkLeaderElection,
-			Port: zkLeaderElectionPort,
-		},
-	}
+	return arcus.Spec.Zookeeper.withDefaults(arcus)
 }
 
 //==============================================================================
@@ -160,7 +60,77 @@ type ArcusList struct {
 }
 
 //==============================================================================
-// Private Function
+// ZookeeperConfig
+//==============================================================================
+type ZookeeperConfig struct {
+	Replicas          int32 `json:"replicas"`
+	MaxClientCnxns    int32 `json:"maxClientCnxns"`
+	TickTime          int32 `json:"tickTime"`
+	InitLimit         int32 `json:"initLimit"`
+	SyncLimit         int32 `json:"syncLimit"`
+	MinSessionTimeout int32 `json:"minSessionTimeout"`
+	MaxSessionTimeout int32 `json:"maxSessionTimeout"`
+
+	Ports ZookeeperPort `json:"ports,omitempty"`
+}
+
+func (c *ZookeeperConfig) withDefaults(arcus *Arcus) (changed bool) {
+	if arcus.Spec.Zookeeper.Replicas == 0 {
+		changed = true
+		arcus.Spec.Zookeeper.Replicas = DefaultZkReplicas
+	}
+	if arcus.Spec.Zookeeper.MaxClientCnxns == 0 {
+		changed = true
+		arcus.Spec.Zookeeper.MaxClientCnxns = DefaultZkMaxClientCnxns
+	}
+	if arcus.Spec.Zookeeper.TickTime == 0 {
+		changed = true
+		arcus.Spec.Zookeeper.TickTime = DefaultZkTickTime
+	}
+	if arcus.Spec.Zookeeper.InitLimit == 0 {
+		changed = true
+		arcus.Spec.Zookeeper.InitLimit = DefaultZkInitLimit
+	}
+	if arcus.Spec.Zookeeper.SyncLimit == 0 {
+		changed = true
+		arcus.Spec.Zookeeper.SyncLimit = DefaultZkSyncLimit
+	}
+	if arcus.Spec.Zookeeper.MinSessionTimeout == 0 {
+		changed = true
+		arcus.Spec.Zookeeper.MinSessionTimeout = DefaultZkMinSessionTimeout
+	}
+	if arcus.Spec.Zookeeper.MaxSessionTimeout == 0 {
+		changed = true
+		arcus.Spec.Zookeeper.MaxSessionTimeout = DefaultZkMaxSessionTimeout
+	}
+
+	if arcus.Spec.Zookeeper.Ports.Client == 0 {
+		changed = true
+		arcus.Spec.Zookeeper.Ports.Client = DefaultZkClientPort
+	}
+	if arcus.Spec.Zookeeper.Ports.Server == 0 {
+		changed = true
+		arcus.Spec.Zookeeper.Ports.Server = DefaultZkServerPort
+	}
+	if arcus.Spec.Zookeeper.Ports.LeaderElection == 0 {
+		changed = true
+		arcus.Spec.Zookeeper.Ports.LeaderElection = DefaultZkLeaderElectionPort
+	}
+
+	return changed
+}
+
+//==============================================================================
+// ZookeeperPort
+//==============================================================================
+type ZookeeperPort struct {
+	Client         int32 `json:"client"`
+	Server         int32 `json:"server"`
+	LeaderElection int32 `json:"leaderElection"`
+}
+
+//==============================================================================
+// Private Functions
 //==============================================================================
 func init() {
 	SchemeBuilder.Register(&Arcus{}, &ArcusList{})
