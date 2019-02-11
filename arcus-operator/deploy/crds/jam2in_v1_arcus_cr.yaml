@@ -5,13 +5,17 @@ metadata:
 spec:
   zookeeper:
     replicas: 3
-    maxClientCnxns: 100
-    tickTime: 2000
-    initLimit: 10
-    syncLimit: 5
-    minSessionTimeout: 4000
-    maxSessionTimeout: 200000
+    image:
+      name: jam2in/arcus:latest
+      pullPolicy: IfNotPresent
     ports:
       client: 2181
       server: 2888
       leaderElection: 3888
+    configuration:
+      maxClientCnxns: 100
+      tickTime: 2000
+      initLimit: 10
+      syncLimit: 5
+      minSessionTimeout: 4000
+      maxSessionTimeout: 200000

@@ -8,8 +8,8 @@ import (
 	"github.com/jam2in/arcus-operator/pkg/util"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -39,14 +39,6 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	err = c.Watch(&source.Kind{Type: &jam2inv1.Arcus{}}, &handler.EnqueueRequestForObject{})
-	if err != nil {
-		return err
-	}
-
-	err = c.Watch(&source.Kind{Type: &corev1.ConfigMap{}}, &handler.EnqueueRequestForOwner{
-		IsController: true,
-		OwnerType:    &jam2inv1.Arcus{},
-	})
 	if err != nil {
 		return err
 	}
@@ -103,6 +95,11 @@ func (r *ReconcileArcus) Reconcile(request reconcile.Request) (reconcile.Result,
 		return reconcile.Result{}, err
 	}
 
+	err = r.reconcilePodDisruptionBudget(arcus)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
 	err = r.reconcileZkHeadlessService(arcus)
 	if err != nil {
 		return reconcile.Result{}, err
@@ -145,6 +142,7 @@ func (r *ReconcileArcus) reconcileArcus(arcus *jam2inv1.Arcus, request *reconcil
 }
 
 func (r *ReconcileArcus) reconcileConfigMap(arcus *jam2inv1.Arcus) error {
+	objectName := "ConfigMap"
 	namespace := arcus.Namespace
 	name := jam2inv1.GetObjectNameConfigMap(arcus)
 
@@ -155,47 +153,71 @@ func (r *ReconcileArcus) reconcileConfigMap(arcus *jam2inv1.Arcus) error {
 		Namespace: namespace,
 		Name:      name,
 	}, oldConfigMap)
+
 	if err != nil {
 		if !errors.IsNotFound(err) {
-			r.log.Error(err, "Failed to get ConfigMap.",
-				"ConfigMap.Namespace", namespace,
-				"ConfigMap.Name", name)
+			r.logFailedToGet(objectName, namespace, name, err)
 			return err
 		}
 		err = controllerutil.SetControllerReference(arcus, newConfigMap, r.scheme)
 		if err != nil {
-			r.log.Error(err, "Failed to set controller reference for ConfigMap.",
-				"ConfigMap.Namespace", namespace,
-				"ConfigMap.Name", name)
+			r.logFailedToSetControllerReference(objectName, namespace, name, err)
 			return err
 		}
-		r.log.Info("Creating a new ConfigMap",
-			"ConfigMap.Namespace", namespace,
-			"ConfigMap.Name", name)
+		r.logFailedToCreate(objectName, namespace, name, err)
 		err = r.client.Create(context.TODO(), newConfigMap)
 		if err != nil {
-			r.log.Error(err, "Failed to create ConfigMap.",
-				"ConfigMap.Namespace", namespace,
-				"ConfigMap.Name", name)
+			r.logFailedToCreate(objectName, namespace, name, err)
 			return err
 		}
 		return nil
 	}
-	r.log.Info("Updating the existing ConfigMap",
-		"ConfigMap.Namespace", namespace,
-		"ConfigMap.Name", name)
 	util.SynchronizeConfigMap(oldConfigMap, newConfigMap)
 	err = r.client.Update(context.TODO(), oldConfigMap)
 	if err != nil {
-		r.log.Error(err, "Failed to update ConfigMap.",
-			"ConfigMap.Namespace", namespace,
-			"ConfigMap.Name", name)
+		r.logFailedToUpdate(objectName, namespace, name, err)
 		return err
 	}
 	return nil
 }
 
+func (r *ReconcileArcus) reconcilePodDisruptionBudget(arcus *jam2inv1.Arcus) error {
+	objectName := "PodDisruptionBudget"
+	namespace := arcus.Namespace
+	name := jam2inv1.GetObjectNamePodDisruptionBudget(arcus)
+
+	newPDB := jam2inv1.CreatePodDisruptionBudget(arcus)
+	oldPDB := &policyv1beta1.PodDisruptionBudget{}
+
+	err := r.client.Get(context.TODO(), types.NamespacedName{
+		Namespace: namespace,
+		Name:      name,
+	}, oldPDB)
+
+	if err != nil {
+		if !errors.IsNotFound(err) {
+			r.logFailedToGet(objectName, namespace, name, err)
+			return err
+		}
+		err = controllerutil.SetControllerReference(arcus, newPDB, r.scheme)
+		if err != nil {
+			r.logFailedToSetControllerReference(objectName, namespace, name, err)
+			return err
+		}
+		r.logCreating(objectName, namespace, name)
+		err = r.client.Create(context.TODO(), newPDB)
+		if err != nil {
+			r.logFailedToCreate(objectName, namespace, name, err)
+			return err
+		}
+		return nil
+	}
+
+	return nil
+}
+
 func (r *ReconcileArcus) reconcileZkHeadlessService(arcus *jam2inv1.Arcus) error {
+	objectName := "Service"
 	namespace := arcus.Namespace
 	name := jam2inv1.GetObjectNameZkHeadlessService(arcus)
 
@@ -206,41 +228,29 @@ func (r *ReconcileArcus) reconcileZkHeadlessService(arcus *jam2inv1.Arcus) error
 		Namespace: namespace,
 		Name:      name,
 	}, oldService)
+
 	if err != nil {
 		if !errors.IsNotFound(err) {
-			r.log.Error(err, "Failed to get Service.",
-				"Service.Namespace", namespace,
-				"Service.Name", name)
+			r.logFailedToGet(objectName, namespace, name, err)
 			return err
 		}
 		err = controllerutil.SetControllerReference(arcus, newService, r.scheme)
 		if err != nil {
-			r.log.Error(err, "Failed to set controller reference for Service.",
-				"Service.Namespace", namespace,
-				"Service.Name", name)
+			r.logFailedToSetControllerReference(objectName, namespace, name, err)
 			return err
 		}
-		r.log.Info("Creating a new Service",
-			"Service.Namespace", namespace,
-			"Service.Name", name)
+		r.logCreating(objectName, namespace, name)
 		err = r.client.Create(context.TODO(), newService)
 		if err != nil {
-			r.log.Error(err, "Failed to create Service.",
-				"Service.Namespace", namespace,
-				"Service.Name", name)
+			r.logFailedToCreate(objectName, namespace, name, err)
 			return err
 		}
 		return nil
 	}
-	r.log.Info("Updating the existing Service",
-		"Service.Namespace", namespace,
-		"Service.Name", name)
 	util.SynchronizeService(oldService, newService)
 	err = r.client.Update(context.TODO(), oldService)
 	if err != nil {
-		r.log.Error(err, "Failed to update Service.",
-			"Service.Namespace", namespace,
-			"Service.Name", name)
+		r.logFailedToUpdate(objectName, namespace, name, err)
 		return err
 	}
 
@@ -248,6 +258,7 @@ func (r *ReconcileArcus) reconcileZkHeadlessService(arcus *jam2inv1.Arcus) error
 }
 
 func (r *ReconcileArcus) reconcileZkStatefulSet(arcus *jam2inv1.Arcus) error {
+	objectName := "StatefulSet"
 	namespace := arcus.Namespace
 	name := jam2inv1.GetObjectNameZkStatefulSet(arcus)
 
@@ -258,140 +269,60 @@ func (r *ReconcileArcus) reconcileZkStatefulSet(arcus *jam2inv1.Arcus) error {
 		Namespace: namespace,
 		Name:      name,
 	}, oldStatefulSet)
+
 	if err != nil {
 		if !errors.IsNotFound(err) {
-			r.log.Error(err, "Failed to get StatefulSet.",
-				"StatefulSet.Namespace", namespace,
-				"StatefulSet.Name", name)
+			r.logFailedToGet(objectName, namespace, name, err)
 			return err
 		}
 		err = controllerutil.SetControllerReference(arcus, newStatefulSet, r.scheme)
 		if err != nil {
-			r.log.Error(err, "Failed to set controller reference for StatefulSet.",
-				"StatefulSet.Namespace", namespace,
-				"StatefulSet.Name", name)
+			r.logFailedToSetControllerReference(objectName, namespace, name, err)
 			return err
 		}
-		r.log.Info("Creating a new StatefulSet",
-			"StatefulSet.Namespace", namespace,
-			"StatefulSet.Name", name)
+		r.logCreating(objectName, namespace, name)
 		err = r.client.Create(context.TODO(), newStatefulSet)
 		if err != nil {
-			r.log.Error(err, "Failed to create StatefulSet.",
-				"StatefulSet.Namespace", namespace,
-				"StatefulSet.Name", name)
+			r.logFailedToCreate(objectName, namespace, name, err)
 			return err
 		}
 		return nil
 	}
-	r.log.Info("Updating the existing StatefulSet",
-		"StatefulSet.Namespace", namespace,
-		"StatefulSet.Name", name)
 	util.SynchronizeStatefulSet(oldStatefulSet, newStatefulSet)
 	err = r.client.Update(context.TODO(), oldStatefulSet)
 	if err != nil {
-		r.log.Error(err, "Failed to update StatefulSet.",
-			"StatefulSet.Namespace", namespace,
-			"StatefulSet.Name", name)
+		r.logFailedToUpdate(objectName, namespace, name, err)
 		return err
 	}
 	return nil
 }
 
-/*
-func (r *ReconcileArcus) reconcileStatefulSet(cr *jam2inv1.Arcus) error {
-	sts := &appsv1.StatefulSet{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{
-		Name:      cr.Name,
-		Namespace: cr.Namespace,
-	}, sts)
-	if err != nil && errors.IsNotFound(err) {
-		r.log.Info("Creating a new Arcus StatefulSet",
-			"StatefulSet.Namespace", sts.Namespace,
-			"StatefulSet.Name", sts.Name)
-		err = r.client.Create(context.TODO(), newStatefulSet(cr))
-	}
+func (r *ReconcileArcus) logCreating(objectName string, namespace string, name string) {
+	r.log.Info("Creating a new "+objectName+".",
+		objectName+".Namespace", namespace,
+		objectName+".Name", name)
 }
 
-func newStatefulSet(cr *jam2inv1.Arcus) *appsv1.StatefulSet {
-	return &appsv1.StatefulSet{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "StatefulSet",
-			APIVersion: "apps/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.Name,
-			Namespace: cr.Namespace,
-			Labels: map[string]string{
-				"app": cr.Name,
-			},
-			Spec: appsv1.StatefulSetSpec{
-				ServiceName: "arcus-headless",
-				Replicas:    &cr.Spec.ZkReplicas,
-				Selector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						"app": cr.Name,
-					},
-				},
-				// TODO: UpdateStrategy
-				// TODO: PodManagementPolicy
-				Template: corev1.PodTemplateSpec{
-					ObjectMeta: metav1.ObjectMeta{
-						GenerateName: cr.GetName(),
-						Labels: map[string]string{
-							"app": cr.Name,
-						},
-					},
-					Spec: corev1.PodSpec{
-						Containers: []corev1.Container{
-							corev1.Container{
-								Name:  "zookeeper",
-								Image: "emccorp/zookeeper:3.5.4-beta-operator",
-								Ports: []corev1.ContainerPort{
-									{
-										Name:          "client",
-										ContainerPort: 2181,
-									},
-									{
-										Name:          "quorum",
-										ContainerPort: 2888,
-									},
-									{
-										Name:          "leader-election",
-										ContainerPort: 3888,
-									},
-								},
-								ImagePullPolicy: "Always",
-								Command:         []string{"/usr/local/bin/zookeeperStart.sh"},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
+func (r *ReconcileArcus) logFailedToGet(objectName string, namespace string, name string, err error) {
+	r.log.Error(err, "Failed to get "+objectName+".",
+		objectName+".Namespace", namespace,
+		objectName+".Name", name)
 }
-*/
 
-// newPodForCR returns a busybox pod with the same name/namespace as the cr
-func newPodForCR(cr *jam2inv1.Arcus) *corev1.Pod {
-	labels := map[string]string{
-		"app": cr.Name,
-	}
-	return &corev1.Pod{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.Name + "-pod",
-			Namespace: cr.Namespace,
-			Labels:    labels,
-		},
-		Spec: corev1.PodSpec{
-			Containers: []corev1.Container{
-				{
-					Name:    "busybox",
-					Image:   "busybox",
-					Command: []string{"sleep", "3600"},
-				},
-			},
-		},
-	}
+func (r *ReconcileArcus) logFailedToSetControllerReference(objectName string, namespace string, name string, err error) {
+	r.log.Error(err, "Failed to set controller reference for "+objectName+".",
+		objectName+".Namespace", namespace,
+		objectName+".Name", name)
+}
+
+func (r *ReconcileArcus) logFailedToCreate(objectName string, namespace string, name string, err error) {
+	r.log.Error(err, "Failed to create "+objectName+".",
+		objectName+".Namespace", namespace,
+		objectName+".Name", name)
+}
+
+func (r *ReconcileArcus) logFailedToUpdate(objectName string, namespace string, name string, err error) {
+	r.log.Error(err, "Failed to update "+objectName+".",
+		objectName+".Namespace", namespace,
+		objectName+".Name", name)
 }

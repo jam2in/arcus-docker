@@ -1,6 +1,8 @@
 package util
 
 import (
+	"strings"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -22,4 +24,8 @@ func SynchronizeService(dst *corev1.Service, src *corev1.Service) {
 func SynchronizeConfigMap(dst *corev1.ConfigMap, src *corev1.ConfigMap) {
 	dst.Data = src.Data
 	dst.BinaryData = src.BinaryData
+}
+
+func MakeFilePath(folder string, filename string) string {
+	return strings.Join([]string{folder, filename}, "/")
 }
