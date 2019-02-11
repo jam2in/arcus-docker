@@ -1,0 +1,45 @@
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: zookeeper-pv-0
+  labels:
+    app: example-zookeepercluster
+spec:
+  capacity:
+    storage: 20Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/zookeeper-pv-0"
+
+---
+
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: zookeeper-pv-1
+  labels:
+    app: example-zookeepercluster
+spec:
+  capacity:
+    storage: 20Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/zookeeper-pv-1"
+
+---
+
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: zookeeper-pv-2
+  labels:
+    app: example-zookeepercluster
+spec:
+  capacity:
+    storage: 20Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/zookeeper-pv-2"
