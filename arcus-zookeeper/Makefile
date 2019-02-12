@@ -7,6 +7,3 @@ build:
 
 push:
 	docker push ${IMAGE}
-
-run:
-	docker run --name arcus-zookeeper -it ${IMAGE} bash
