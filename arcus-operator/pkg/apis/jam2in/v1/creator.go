@@ -84,9 +84,6 @@ func CreateZkStatefulSet(arcus *Arcus) *appsv1.StatefulSet {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      GetObjectNameZkStatefulSet(arcus),
 			Namespace: arcus.Namespace,
-			Labels: map[string]string{
-				LabelKeyApp: LabelValueZk,
-			},
 		},
 		Spec: appsv1.StatefulSetSpec{
 			ServiceName: GetObjectNameZkHeadlessService(arcus),
@@ -186,8 +183,12 @@ func CreatePodDisruptionBudget(arcus *Arcus) *policyv1beta1.PodDisruptionBudget 
 		Spec: policyv1beta1.PodDisruptionBudgetSpec{
 			MaxUnavailable: &pdbCount,
 			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					LabelKeyApp: LabelValueZk,
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{
+						Key:      LabelKeyApp,
+						Operator: metav1.LabelSelectorOpIn,
+						Values:   []string{LabelValueZk, LabelValueMc},
+					},
 				},
 			},
 		},

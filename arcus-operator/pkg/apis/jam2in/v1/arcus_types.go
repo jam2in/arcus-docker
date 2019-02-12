@@ -6,24 +6,31 @@ import (
 )
 
 //==============================================================================
-// Constant
+// Constants
 //==============================================================================
 const (
+	// Default ZooekeperSpec
 	DefaultZkReplicas = 3
 
+	// Default ContainerImage
 	DefaultZkImage           = "jam2in/arcus:latest"
 	DefaultZkImagePullPolicy = "Always"
 
+	// Default ZookeeperPort
+	DefaultZkClientPort         = 2181
+	DefaultZkServerPort         = 2888
+	DefaultZkLeaderElectionPort = 3888
+
+	// Default PodPolicy
+	DefaultZkTerminationGracePeriodSeconds = corev1.DefaultTerminationGracePeriodSeconds
+
+	// Default ZookeeperConfiguration
 	DefaultZkMaxClientCnxns    = 100
 	DefaultZkTickTime          = 2000
 	DefaultZkInitLimit         = 10
 	DefaultZkSyncLimit         = 5
 	DefaultZkMinSessionTimeout = 4000
 	DefaultZkMaxSessionTimeout = 200000
-
-	DefaultZkClientPort         = 2181
-	DefaultZkServerPort         = 2888
-	DefaultZkLeaderElectionPort = 3888
 )
 
 //==============================================================================
@@ -73,65 +80,53 @@ type ZookeeperSpec struct {
 
 	Ports ZookeeperPort `json:"ports,omitempty"`
 
+	Pod PodPolicy `json:"pod,omitempty"`
+
 	Configuration ZookeeperConfiguration `json:"configuration,omitempty"`
 }
 
-func (c *ZookeeperSpec) withDefaults(arcus *Arcus) (changed bool) {
-	zkSpec := &arcus.Spec.Zookeeper
-	zkImage := &zkSpec.Image
-	zkPorts := &zkSpec.Ports
-	zkConfig := &zkSpec.Configuration
-
-	if zkSpec.Replicas == 0 {
+func (spec *ZookeeperSpec) withDefaults(arcus *Arcus) (changed bool) {
+	if arcus.Spec.Zookeeper.Replicas == 0 {
 		changed = true
-		zkSpec.Replicas = DefaultZkReplicas
+		arcus.Spec.Zookeeper.Replicas = DefaultZkReplicas
 	}
 
-	if zkImage.Name == "" {
+	if arcus.Spec.Zookeeper.Image.withDefaults() {
 		changed = true
-		zkImage.Name = DefaultZkImage
-	}
-	if zkImage.PullPolicy == "" {
-		changed = true
-		zkImage.PullPolicy = DefaultZkImagePullPolicy
 	}
 
-	if zkPorts.Client == 0 {
+	if arcus.Spec.Zookeeper.Ports.withDefaults() {
 		changed = true
-		zkPorts.Client = DefaultZkClientPort
-	}
-	if zkPorts.Server == 0 {
-		changed = true
-		zkPorts.Server = DefaultZkServerPort
-	}
-	if zkPorts.LeaderElection == 0 {
-		changed = true
-		zkPorts.LeaderElection = DefaultZkLeaderElectionPort
 	}
 
-	if zkConfig.MaxClientCnxns == 0 {
+	if arcus.Spec.Zookeeper.Configuration.withDefaults() {
 		changed = true
-		zkConfig.MaxClientCnxns = DefaultZkMaxClientCnxns
 	}
-	if zkConfig.TickTime == 0 {
+
+	return changed
+}
+
+//==============================================================================
+// ZookeeperPort
+//==============================================================================
+type ZookeeperPort struct {
+	Client         int32 `json:"client"`
+	Server         int32 `json:"server"`
+	LeaderElection int32 `json:"leaderElection"`
+}
+
+func (ports *ZookeeperPort) withDefaults() (changed bool) {
+	if ports.Client == 0 {
 		changed = true
-		zkConfig.TickTime = DefaultZkTickTime
+		ports.Client = DefaultZkClientPort
 	}
-	if zkConfig.InitLimit == 0 {
+	if ports.Server == 0 {
 		changed = true
-		zkConfig.InitLimit = DefaultZkInitLimit
+		ports.Server = DefaultZkServerPort
 	}
-	if zkConfig.SyncLimit == 0 {
+	if ports.LeaderElection == 0 {
 		changed = true
-		zkConfig.SyncLimit = DefaultZkSyncLimit
-	}
-	if zkConfig.MinSessionTimeout == 0 {
-		changed = true
-		zkConfig.MinSessionTimeout = DefaultZkMinSessionTimeout
-	}
-	if zkConfig.MaxSessionTimeout == 0 {
-		changed = true
-		zkConfig.MaxSessionTimeout = DefaultZkMaxSessionTimeout
+		ports.LeaderElection = DefaultZkLeaderElectionPort
 	}
 
 	return changed
@@ -149,13 +144,33 @@ type ZookeeperConfiguration struct {
 	MaxSessionTimeout int32 `json:"maxSessionTimeout"`
 }
 
-//==============================================================================
-// ZookeeperPort
-//==============================================================================
-type ZookeeperPort struct {
-	Client         int32 `json:"client"`
-	Server         int32 `json:"server"`
-	LeaderElection int32 `json:"leaderElection"`
+func (configuration *ZookeeperConfiguration) withDefaults() (changed bool) {
+	if configuration.MaxClientCnxns == 0 {
+		changed = true
+		configuration.MaxClientCnxns = DefaultZkMaxClientCnxns
+	}
+	if configuration.TickTime == 0 {
+		changed = true
+		configuration.TickTime = DefaultZkTickTime
+	}
+	if configuration.InitLimit == 0 {
+		changed = true
+		configuration.InitLimit = DefaultZkInitLimit
+	}
+	if configuration.SyncLimit == 0 {
+		changed = true
+		configuration.SyncLimit = DefaultZkSyncLimit
+	}
+	if configuration.MinSessionTimeout == 0 {
+		changed = true
+		configuration.MinSessionTimeout = DefaultZkMinSessionTimeout
+	}
+	if configuration.MaxSessionTimeout == 0 {
+		changed = true
+		configuration.MaxSessionTimeout = DefaultZkMaxSessionTimeout
+	}
+
+	return changed
 }
 
 //==============================================================================
@@ -164,6 +179,36 @@ type ZookeeperPort struct {
 type ContainerImage struct {
 	Name       string            `json:"name"`
 	PullPolicy corev1.PullPolicy `json:"pullPolicy"`
+}
+
+func (image *ContainerImage) withDefaults() (changed bool) {
+	if image.Name == "" {
+		changed = true
+		image.Name = DefaultZkImage
+	}
+	if image.PullPolicy == "" {
+		changed = true
+		image.PullPolicy = DefaultZkImagePullPolicy
+	}
+
+	return changed
+}
+
+//==============================================================================
+// PodPolicy
+//==============================================================================
+type PodPolicy struct {
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+
+	Affinity *corev1.Affinity `json:"affinity,omitempty"`
+
+	Resources corev1.ResourceRequirements `json:resources,omitempty`
+
+	Toleration []corev1.Toleration `json:toleration,omitempty`
+
+	Annotations map[string]string `json:"annotations,omitempty"`
+
+	TerminationGracePeriodSeconds int64 `json:"terminationGracePeriodSeconds"`
 }
 
 //==============================================================================
