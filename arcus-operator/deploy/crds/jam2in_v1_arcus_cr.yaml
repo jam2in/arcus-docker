@@ -6,12 +6,16 @@ spec:
   zookeeper:
     replicas: 3
     image:
-      name: jam2in/arcus:latest
+      name: zookeeper:3.4.13
       pullPolicy: IfNotPresent
     ports:
       client: 2181
       server: 2888
       leaderElection: 3888
+    directory:
+      home: /zookeeper-3.4.13
+      conf: /conf
+      data: /data
     configuration:
       maxClientCnxns: 100
       tickTime: 2000

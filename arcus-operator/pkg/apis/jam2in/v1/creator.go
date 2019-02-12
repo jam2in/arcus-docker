@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/jam2in/arcus-operator/pkg/util"
@@ -103,12 +104,16 @@ func CreateZkStatefulSet(arcus *Arcus) *appsv1.StatefulSet {
 					},
 				},
 				Spec: corev1.PodSpec{
+					NodeSelector:                  arcus.Spec.Zookeeper.Pod.NodeSelector,
+					Affinity:                      arcus.Spec.Zookeeper.Pod.Affinity,
+					Tolerations:                   arcus.Spec.Zookeeper.Pod.Toleration,
+					TerminationGracePeriodSeconds: &arcus.Spec.Zookeeper.Pod.TerminationGracePeriodSeconds,
 					Volumes: []corev1.Volume{
 						{
 							Name: GetObjectNameZkVolume(arcus),
 							VolumeSource: corev1.VolumeSource{
 								ConfigMap: &corev1.ConfigMapVolumeSource{
-									DefaultMode: GetDefaultMode(),
+									DefaultMode: defaultMode(),
 									LocalObjectReference: corev1.LocalObjectReference{
 										Name: GetObjectNameConfigMap(arcus),
 									},
@@ -135,24 +140,26 @@ func CreateZkStatefulSet(arcus *Arcus) *appsv1.StatefulSet {
 									ContainerPort: arcus.Spec.Zookeeper.Ports.LeaderElection,
 								},
 							},
+							Resources: arcus.Spec.Zookeeper.Pod.Resources,
+							Env:       arcus.Spec.Zookeeper.Pod.Env,
 							ReadinessProbe: &corev1.Probe{
 								InitialDelaySeconds: ProbeInitialDelaySecondsZk,
 								TimeoutSeconds:      ProbeTimeoutSecondsZk,
 								Handler: corev1.Handler{
-									Exec: &corev1.ExecAction{Command: []string{util.MakeFilePath(PathZkScripts, FileZkOkScript)}},
+									Exec: &corev1.ExecAction{Command: []string{util.MakeFilePath(DirPathZkScripts, FileZkOkScript)}},
 								},
 							},
 							LivenessProbe: &corev1.Probe{
 								InitialDelaySeconds: ProbeInitialDelaySecondsZk,
 								TimeoutSeconds:      ProbeTimeoutSecondsZk,
 								Handler: corev1.Handler{
-									Exec: &corev1.ExecAction{Command: []string{util.MakeFilePath(PathZkScripts, FileZkOkScript)}},
+									Exec: &corev1.ExecAction{Command: []string{util.MakeFilePath(DirPathZkScripts, FileZkOkScript)}},
 								},
 							},
 							Command: []string{"/bin/bash"},
-							Args:    []string{"-c", util.MakeFilePath(PathZkScripts, FileZkInitScript) + " && $ZOOKEEPER_PATH/bin/zkServer.sh start-foreground"},
+							Args:    []string{"-c", util.MakeFilePath(DirPathZkScripts, FileZkInitScript) + " && " + arcus.Spec.Zookeeper.Directory.Home + "/bin/zkServer.sh start-foreground"},
 							VolumeMounts: []corev1.VolumeMount{
-								{Name: GetObjectNameZkVolume(arcus), MountPath: PathZkScripts},
+								{Name: GetObjectNameZkVolume(arcus), MountPath: DirPathZkScripts},
 							},
 						},
 					},
@@ -198,44 +205,61 @@ func CreatePodDisruptionBudget(arcus *Arcus) *policyv1beta1.PodDisruptionBudget 
 //==============================================================================
 // Private Functions
 //==============================================================================
+func headlessDomain(arcus *Arcus) string {
+	return fmt.Sprintf("%s.%s.svc.cluster.local", GetObjectNameZkHeadlessService(arcus), arcus.Namespace)
+}
+
+func defaultMode() *int32 {
+	defaultMode := new(int32)
+	*defaultMode = int32(0755)
+	return defaultMode
+}
+
 func createZkInitScript(arcus *Arcus) string {
 	return "#!/bin/bash\n\n" +
 		"set -ex\n\n" +
-		"ZOOKEEPER_CONF_FILE=$ZOOKEEPER_PATH/conf/zoo.cfg\n" +
-		"ZOOKEEPER_MY_ID_FILE=$ZOOKEEPER_PATH/data/myid\n\n" +
+		"ZOOKEEPER_CONF_DIR=" + arcus.Spec.Zookeeper.Directory.Conf + "\n" +
+		"ZOOKEEPER_CONF_FILE=$ZOOKEEPER_CONF_DIR/zoo.cfg\n" +
+		"ZOOKEEPER_DATA_DIR=" + arcus.Spec.Zookeeper.Directory.Data + "\n" +
+		"ZOOKEEPER_MYID_FILE=$ZOOKEEPER_DATA_DIR/myid\n\n" +
 		"HOST_SHORT_NAME=`hostname -s`\n" +
-		"HOST_DOMAIN_NAME=" + GetHeadlessDomain(arcus) + "\n\n" +
+		"HOST_DOMAIN_NAME=" + headlessDomain(arcus) + "\n\n" +
 		"if [[ $HOST_SHORT_NAME =~ (.*)-([0-9]+)$ ]]; then\n" +
 		"    HOST_NAME=${BASH_REMATCH[1]}\n" +
 		"    HOST_ORG=${BASH_REMATCH[2]}\n" +
 		"fi\n\n" +
 		"function create_config() {\n" +
-		"    mkdir -p $ZOOKEEPER_PATH/conf\n" +
-		"    echo \"maxClientCnxns=" + strconv.Itoa(int(arcus.Spec.Zookeeper.Configuration.MaxClientCnxns)) + "\" >> $ZOOKEEPER_CONF_FILE\n" +
+		"    set +e\n" +
+		"    mkdir -p $ZOOKEEPER_CONF_DIR\n" +
+		"    set -e\n" +
+		"    echo \"maxClientCnxns=" + strconv.Itoa(int(arcus.Spec.Zookeeper.Configuration.MaxClientCnxns)) + "\" > $ZOOKEEPER_CONF_FILE\n" +
 		"    echo \"tickTime=" + strconv.Itoa(int(arcus.Spec.Zookeeper.Configuration.TickTime)) + "\" >> $ZOOKEEPER_CONF_FILE\n" +
 		"    echo \"initLimit=" + strconv.Itoa(int(arcus.Spec.Zookeeper.Configuration.InitLimit)) + "\" >> $ZOOKEEPER_CONF_FILE\n" +
 		"    echo \"syncLimit=" + strconv.Itoa(int(arcus.Spec.Zookeeper.Configuration.SyncLimit)) + "\" >> $ZOOKEEPER_CONF_FILE\n" +
 		"    echo \"minSessionTimeout=" + strconv.Itoa(int(arcus.Spec.Zookeeper.Configuration.MinSessionTimeout)) + "\" >> $ZOOKEEPER_CONF_FILE\n" +
 		"    echo \"maxSessionTimeout=" + strconv.Itoa(int(arcus.Spec.Zookeeper.Configuration.MaxSessionTimeout)) + "\" >> $ZOOKEEPER_CONF_FILE\n" +
 		"    echo \"clientPort=" + strconv.Itoa(int(arcus.Spec.Zookeeper.Ports.Client)) + "\" >> $ZOOKEEPER_CONF_FILE\n" +
-		"    echo \"dataDir=$ZOOKEEPER_PATH/data\" >> $ZOOKEEPER_CONF_FILE\n" +
+		"    echo \"dataDir=$ZOOKEEPER_DATA_DIR\" >> $ZOOKEEPER_CONF_FILE\n" +
 		"    for (( i=0; i<" + strconv.Itoa(int(arcus.Spec.Zookeeper.Replicas)) + "; i++ ))\n" +
 		"    do\n" +
 		"         if [ $i -eq $HOST_ORG ]; then\n" +
 		"							# Zookeeper UnknownHostException issue in Kubernetes\n" +
 		"             # https://github.com/kubernetes/contrib/issues/2737\n" +
 		"							# https://stackoverflow.com/questions/46605686/zookeeper-hostname-resolution-fails\n" +
+		"             # https://hub.docker.com/_/zookeeper?tab=description\n" +
 		"             echo \"server.$((i+1))=0.0.0.0:" + strconv.Itoa(int(arcus.Spec.Zookeeper.Ports.Server)) + ":" + strconv.Itoa(int(arcus.Spec.Zookeeper.Ports.LeaderElection)) + "\" >> $ZOOKEEPER_CONF_FILE\n" +
 		"         else\n" +
 		"             echo \"server.$((i+1))=$HOST_NAME-$i.$HOST_DOMAIN_NAME:" + strconv.Itoa(int(arcus.Spec.Zookeeper.Ports.Server)) + ":" + strconv.Itoa(int(arcus.Spec.Zookeeper.Ports.LeaderElection)) + "\" >> $ZOOKEEPER_CONF_FILE\n" +
 		"         fi\n" +
 		"    done\n" +
 		"}\n\n" +
-		"function create_my_id() {\n" +
-		"    mkdir -p $ZOOKEEPER_PATH/data\n" +
-		"    echo $((HOST_ORG+1)) > $ZOOKEEPER_MY_ID_FILE\n" +
+		"function create_myid() {\n" +
+		"    set +e\n" +
+		"    mkdir -p $ZOOKEEPER_DATA_DIR\n" +
+		"    set -e\n" +
+		"    echo $((HOST_ORG+1)) > $ZOOKEEPER_MYID_FILE\n" +
 		"}\n\n" +
-		"create_config && create_my_id"
+		"create_config && create_myid"
 }
 
 func createZkOkScript(arcus *Arcus) string {

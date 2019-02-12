@@ -13,16 +13,21 @@ const (
 	DefaultZkReplicas = 3
 
 	// Default ContainerImage
-	DefaultZkImage           = "jam2in/arcus:latest"
+	DefaultZkImage           = "zookeeper/3.4.13:latest"
 	DefaultZkImagePullPolicy = "Always"
+
+	// Default PodPolicy
+	DefaultZkTerminationGracePeriodSeconds = corev1.DefaultTerminationGracePeriodSeconds
 
 	// Default ZookeeperPort
 	DefaultZkClientPort         = 2181
 	DefaultZkServerPort         = 2888
 	DefaultZkLeaderElectionPort = 3888
 
-	// Default PodPolicy
-	DefaultZkTerminationGracePeriodSeconds = corev1.DefaultTerminationGracePeriodSeconds
+	// Default ZookeeperDirectory
+	DefaultZkDirHome = "/zookeeper-3.4.13"
+	DefaultZkDirConf = "/conf"
+	DefaultZkDirData = "/data"
 
 	// Default ZookeeperConfiguration
 	DefaultZkMaxClientCnxns    = 100
@@ -78,9 +83,11 @@ type ZookeeperSpec struct {
 
 	Image ContainerImage `json:"image,omitempty"`
 
+	Pod PodPolicy `json:"pod,omitempty"`
+
 	Ports ZookeeperPort `json:"ports,omitempty"`
 
-	Pod PodPolicy `json:"pod,omitempty"`
+	Directory ZookeeperDirectory `json:directory,omitempty`
 
 	Configuration ZookeeperConfiguration `json:"configuration,omitempty"`
 }
@@ -91,7 +98,11 @@ func (spec *ZookeeperSpec) withDefaults(arcus *Arcus) (changed bool) {
 		arcus.Spec.Zookeeper.Replicas = DefaultZkReplicas
 	}
 
-	if arcus.Spec.Zookeeper.Image.withDefaults() {
+	if arcus.Spec.Zookeeper.Image.withZkDefaults() {
+		changed = true
+	}
+
+	if arcus.Spec.Zookeeper.Pod.withZkDefaults() {
 		changed = true
 	}
 
@@ -99,8 +110,84 @@ func (spec *ZookeeperSpec) withDefaults(arcus *Arcus) (changed bool) {
 		changed = true
 	}
 
+	if arcus.Spec.Zookeeper.Directory.withDefaults() {
+		changed = true
+	}
+
 	if arcus.Spec.Zookeeper.Configuration.withDefaults() {
 		changed = true
+	}
+
+	return changed
+}
+
+//==============================================================================
+// ContainerImage
+//==============================================================================
+type ContainerImage struct {
+	Name       string            `json:"name"`
+	PullPolicy corev1.PullPolicy `json:"pullPolicy"`
+}
+
+func (image *ContainerImage) withZkDefaults() (changed bool) {
+	if image.Name == "" {
+		changed = true
+		image.Name = DefaultZkImage
+	}
+	if image.PullPolicy == "" {
+		changed = true
+		image.PullPolicy = DefaultZkImagePullPolicy
+	}
+
+	return changed
+}
+
+//==============================================================================
+// PodPolicy
+//==============================================================================
+type PodPolicy struct {
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+
+	Affinity *corev1.Affinity `json:"affinity,omitempty"`
+
+	Resources corev1.ResourceRequirements `json:resources,omitempty`
+
+	Toleration []corev1.Toleration `json:toleration,omitempty`
+
+	Env []corev1.EnvVar `json:"env.omitempty"`
+
+	TerminationGracePeriodSeconds int64 `json:"terminationGracePeriodSeconds"`
+}
+
+func (pod *PodPolicy) withZkDefaults() (changed bool) {
+	if pod.TerminationGracePeriodSeconds == 0 {
+		changed = true
+		pod.TerminationGracePeriodSeconds = DefaultZkTerminationGracePeriodSeconds
+	}
+
+	if pod.Affinity == nil {
+		changed = true
+		pod.Affinity = &corev1.Affinity{
+			PodAntiAffinity: &corev1.PodAntiAffinity{
+				PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
+					{
+						Weight: 100,
+						PodAffinityTerm: corev1.PodAffinityTerm{
+							LabelSelector: &metav1.LabelSelector{
+								MatchExpressions: []metav1.LabelSelectorRequirement{
+									{
+										Key:      LabelKeyApp,
+										Operator: metav1.LabelSelectorOpIn,
+										Values:   []string{LabelValueZk},
+									},
+								},
+							},
+							TopologyKey: "kubernetes.io/hostname",
+						},
+					},
+				},
+			},
+		}
 	}
 
 	return changed
@@ -127,6 +214,32 @@ func (ports *ZookeeperPort) withDefaults() (changed bool) {
 	if ports.LeaderElection == 0 {
 		changed = true
 		ports.LeaderElection = DefaultZkLeaderElectionPort
+	}
+
+	return changed
+}
+
+//==============================================================================
+// ZookeeperDirectory
+//==============================================================================
+type ZookeeperDirectory struct {
+	Home string `json:"home"`
+	Conf string `json:"conf"`
+	Data string `json:"data"`
+}
+
+func (directory *ZookeeperDirectory) withDefaults() (changed bool) {
+	if directory.Home == "" {
+		changed = true
+		directory.Home = DefaultZkDirHome
+	}
+	if directory.Conf == "" {
+		changed = true
+		directory.Conf = DefaultZkDirConf
+	}
+	if directory.Data == "" {
+		changed = true
+		directory.Data = DefaultZkDirData
 	}
 
 	return changed
@@ -171,44 +284,6 @@ func (configuration *ZookeeperConfiguration) withDefaults() (changed bool) {
 	}
 
 	return changed
-}
-
-//==============================================================================
-// ContainerImage
-//==============================================================================
-type ContainerImage struct {
-	Name       string            `json:"name"`
-	PullPolicy corev1.PullPolicy `json:"pullPolicy"`
-}
-
-func (image *ContainerImage) withDefaults() (changed bool) {
-	if image.Name == "" {
-		changed = true
-		image.Name = DefaultZkImage
-	}
-	if image.PullPolicy == "" {
-		changed = true
-		image.PullPolicy = DefaultZkImagePullPolicy
-	}
-
-	return changed
-}
-
-//==============================================================================
-// PodPolicy
-//==============================================================================
-type PodPolicy struct {
-	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
-
-	Affinity *corev1.Affinity `json:"affinity,omitempty"`
-
-	Resources corev1.ResourceRequirements `json:resources,omitempty`
-
-	Toleration []corev1.Toleration `json:toleration,omitempty`
-
-	Annotations map[string]string `json:"annotations,omitempty"`
-
-	TerminationGracePeriodSeconds int64 `json:"terminationGracePeriodSeconds"`
 }
 
 //==============================================================================
