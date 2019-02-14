@@ -1,30 +1,31 @@
-# image
-FROM jam2in/arcus-ubuntu:14.04
+FROM centos:6.9
 
-# maintainer
-MAINTAINER hjyun <hjyun@jam2in.com>
+ARG ARCUS_REPOSITORY=https://github.com/naver/arcus.git
 
-# env
-ENV ARCUS_PATH        /usr/lib/arcus
-ENV ARCUS_USER        arcus
-ENV ZOOKEEPER_PATH    $ARCUS_PATH/zookeeper
+RUN yum update -y; \
+    yum install -y \
+      gcc \
+      gcc-c++ \
+      autoconf \
+      automake \
+      libtool \
+      pkgconfig \
+      cppunit-devel \
+      python-setuptools \
+      python-devel \
+      java-1.8.0-openjdk-devel \
+      ant \
+      git
 
-# add arcus user
-RUN useradd -d $ARCUS_PATH -c ARCUS -s /bin/bash $ARCUS_USER
-RUN rm -rf $ARCUS_PATH/*
-RUN echo "$ARCUS_USER:$ARCUS_USER" : chpasswd
+ENV ARCUS_USER    arcus
+ENV ARCUS_DIR     /arcus
+ENV ZOOKEEPER_DIR /arcus/zookeeper
+ENV PATH          $PATH:$ARCUS_DIR/server:$ZOOKEEPER_DIR/bin
 
-# user password
-RUN echo "$ARCUS_USER:$ARCUS_USER" | chpasswd
-RUN echo "$ARCUS_USER ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+RUN set -ex; \
+    adduser "$ARCUS_USER"; \
+    git clone $ARCUS_REPOSITORY; \
+    $ARCUS_DIR/scripts/build.sh; \
+    chown -R "$ARCUS_USER:$ARCUS_USER" "$ARCUS_DIR";
 
-# download arcus
-WORKDIR /usr/lib
-RUN git clone https://github.com/hjyun328/arcus.git
-RUN chown -R $ARCUS_USER:$ARCUS_USER $ARCUS_PATH
-
-# build arcus
-USER $ARCUS_USER
-WORKDIR $ARCUS_PATH/scripts
-RUN ./build.sh
-WORKDIR $ARCUS_PATH
+WORKDIR $ARCUS_DIR
