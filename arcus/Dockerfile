@@ -15,10 +15,12 @@ RUN yum update -y; \
       python-devel \
       java-1.8.0-openjdk-devel \
       ant \
-      git
+      git \
+      nmap
 
 ENV ARCUS_USER    arcus
 ENV ARCUS_DIR     /arcus
+ENV MEMCACHED_DIR /arcus/server
 ENV ZOOKEEPER_DIR /arcus/zookeeper
 ENV PATH          $PATH:$ARCUS_DIR/server:$ZOOKEEPER_DIR/bin
 
