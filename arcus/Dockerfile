@@ -28,6 +28,6 @@ RUN set -ex; \
     adduser "$ARCUS_USER"; \
     git clone $ARCUS_REPOSITORY; \
     $ARCUS_DIR/scripts/build.sh; \
-    chown -R "$ARCUS_USER:$ARCUS_USER" "$ARCUS_DIR";
+    chown -R "$ARCUS_USER:$ARCUS_USER" "$ARCUS_DIR"
 
 WORKDIR $ARCUS_DIR
