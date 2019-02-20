@@ -16,7 +16,7 @@ RUN yum update -y; \
       java-1.8.0-openjdk-devel \
       ant \
       git \
-      nmap
+      nc
 
 ENV ARCUS_USER    arcus
 ENV ARCUS_DIR     /arcus
