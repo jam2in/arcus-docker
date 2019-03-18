@@ -1,4 +1,4 @@
-IMAGE=jam2in/arcus-zookeeper:3.4.7
+IMAGE=jam2in/arcus-zookeeper:latest
 
 build:
 	docker build -t ${IMAGE} . --network=host
