@@ -34,6 +34,7 @@ RUN set -ex; \
 RUN set -ex; \
     git clone $MEMCACHED_REPOSITORY; \
     pushd $MEMCACHED_DIR; \
+    git checkout 1.11.6; \
     config/autorun.sh; \
     ./configure --enable-zk-integration --with-libevent=$ARCUS_DIR --with-zookeeper=$ARCUS_DIR; \
     make; \
