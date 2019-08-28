@@ -1,22 +1,25 @@
-FROM centos7
+FROM centos:7
 
-ARG ZOOKEEPER_REPOSITORY=http://archive.apache.org/dist/zookeeper/zookeeper-${ARCUS_ZOOKEEPER_IMAGE}/zookeeper-${ARCUS_ZOOKEEPER_IMAGE}.tar.gz
-ARG ZOOKEEPER_FILE=zookeeper-${ARCUS_ZOOKEEPER_IMAGE}.tar.gz
+ARG ZOOKEEPER_REPOSITORY=http://archive.apache.org/dist/zookeeper/zookeeper-${ARCUS_ZOOKEEPER_VERSION}/zookeeper-${ARCUS_ZOOKEEPER_VERSION}.tar.gz
+ARG ZOOKEEPER_FILE=zookeeper-${ARCUS_ZOOKEEPER_VERSION}.tar.gz
 
-RUN apk add --no-cache \
-    bash \
-    su-exec
+RUN yum update -y; \
+    yum install -y \
+        java-1.8.0-openjdk-devel \
+        nc \
+        net-tools \
+        telnet
 
 ENV ZOOKEEPER_USER     zookeeper
-ENV ZOOKEEPER_DIR      /zookeeper-${ARCUS_ZOOKEEPER_IMAGE}
+ENV ZOOKEEPER_DIR      /zookeeper-${ARCUS_ZOOKEEPER_VERSION}
 ENV ZOOKEEPER_CONF_DIR $ZOOKEEPER_DIR/conf
 ENV ZOOKEEPER_DATA_DIR $ZOOKEEPER_DIR/data
 ENV ZOOCFGDIR          $ZOOKEEPER_CONF_DIR
 ENV PATH               $PATH:$ZOOKEEPER_DIR/bin
 
 RUN set -ex; \
-    adduser -D "$ZOOKEEPER_USER"; \
-    wget -q "$ZOOKEEPER_REPOSITORY"; \
+    adduser "$ZOOKEEPER_USER"; \
+    curl -O "$ZOOKEEPER_REPOSITORY"; \
     tar -xzf "$ZOOKEEPER_FILE"; \
     mkdir -p "$ZOOKEEPER_CONF_DIR" "$ZOOKEEPER_DATA_DIR"; \
     chown -R "$ZOOKEEPER_USER:$ZOOKEEPER_USER" "$ZOOKEEPER_DIR" "$ZOOKEEPER_CONF_DIR" "$ZOOKEEPER_DATA_DIR"; \
