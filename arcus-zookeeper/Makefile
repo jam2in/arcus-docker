@@ -1,7 +1,11 @@
-IMAGE=jam2in/arcus-zookeeper:latest
+ARCUS_ZOOKEEPER_VERSION=3.4.7
+ARCUS_ZOOKEEPER_IMAGE_NAME=jam2in/arcus-zookeeper
+ARCUS_ZOOKEEPER_IMAGE_TAG=3.4.7
+ARCUS_ZOOKEEPER_IMAGE=${ARCUS_ZOOKEEPER_IMAGE_NAME}:${ARCUS_ZOOKEEPER_IMAGE_TAG}
 
 build:
-	docker build -t ${IMAGE} . --network=host
+	@ sed 's|\$${ARCUS_ZOOKEEPER_VERSION}|${ARCUS_ZOOKEEPER_VERSION}|g' Dockerfile.template > Dockerfile
+	@ docker build -t ${ARCUS_ZOOKEEPER_IMAGE} . --network=host
 
 push:
-	docker push ${IMAGE}
+	@ docker push ${ARCUS_ZOOKEEPER_IMAGE}

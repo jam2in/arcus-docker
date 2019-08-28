@@ -1,7 +1,11 @@
-IMAGE=jam2in/arcus-memcached:latest
+ARCUS_MEMCACHED_VERSION=1.11.6
+ARCUS_MEMCACHED_IMAGE_NAME=jam2in/arcus-memcached
+ARCUS_MEMCACHED_IMAGE_TAG=1.11.6
+ARCUS_MEMCACHED_IMAGE=${ARCUS_MEMCACHED_IMAGE_NAME}:${ARCUS_MEMCACHED_IMAGE_TAG}
 
 build:
-	docker build -t ${IMAGE} . --network=host
+	@ sed 's|\$${ARCUS_MEMCACHED_VERSION}|${ARCUS_MEMCACHED_VERSION}|g' Dockerfile.template > Dockerfile
+	@ docker build -t ${ARCUS_MEMCACHED_IMAGE} . --network=host
 
 push:
-	docker push ${IMAGE}
+	@ docker push ${ARCUS_MEMCACHED_IMAGE}
