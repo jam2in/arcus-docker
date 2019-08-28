@@ -1,4 +1,4 @@
-FROM centos:6.9
+FROM centos:7
 
 ARG ARCUS_REPOSITORY=https://github.com/naver/arcus.git
 ARG MEMCACHED_REPOSITORY=https://github.com/naver/arcus-memcached.git
