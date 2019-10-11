@@ -1,6 +1,6 @@
-ARCUS_ZOOKEEPER_VERSION=3.4.7
-ARCUS_ZOOKEEPER_IMAGE_REPO=jam2in/arcus-zookeeper
-ARCUS_ZOOKEEPER_IMAGE_TAG=3.4.7
+include Docker.env
+export $(shell sed 's/=.*//' Docker.env)
+
 ARCUS_ZOOKEEPER_IMAGE=${ARCUS_ZOOKEEPER_IMAGE_REPO}:${ARCUS_ZOOKEEPER_IMAGE_TAG}
 
 build:
