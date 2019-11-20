@@ -1,0 +1,40 @@
+apply plugin: 'war'
+
+buildscript {
+    ext {
+       springBootVersion = '2.2.0.RELEASE'
+    }
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
+    }
+}
+
+apply plugin: 'java'
+apply plugin: 'idea'
+apply plugin: 'org.springframework.boot'
+apply plugin: 'io.spring.dependency-management'
+
+group 'arcus-application-sample'
+version '0.0.1'
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile('org.springframework.boot:spring-boot-starter-web')
+    compile('org.springframework.boot:spring-boot-starter-thymeleaf')
+    compile('org.springframework.boot:spring-boot-devtools')
+    compile('com.navercorp.arcus:arcus-java-client:1.11.4')
+    testCompile('org.springframework.boot:spring-boot-starter-test')
+}
+
+configurations.all {
+    exclude group: "org.apache.logging.log4j", module: "log4j-api"
+    exclude group: "org.apache.logging.log4j", module: "log4j-to-slf4j"
+    exclude group: "org.slf4j", module: "slf4j-log4j12"
+}

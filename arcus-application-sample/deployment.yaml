@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: arcus-application-sample
+  labels:
+    app: arcus-application-sample
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: arcus-application-sample
+  template:
+    metadata:
+      labels:
+        app: arcus-application-sample
+    spec:
+      containers:
+        - name: arcus-application-sample
+          image: jam2in/arcus-application-sample:0.0.1
+          ports:
+          - containerPort: 80
+          env:
+          - name: ARCUS_ADDRESS
+            value: "${ARCUS_ADDRESS}"
+          - name: ARCUS_SERVICE_CODE
+            value: "${ARCUS_SERVICE_CODE}"
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: arcus-application-sample
+  labels:
+    app: arcus-application-sample
+spec:
+  ports:
+  - port: 8080
+    protocol: TCP
+  selector:
+    app: arcus-application-sample
