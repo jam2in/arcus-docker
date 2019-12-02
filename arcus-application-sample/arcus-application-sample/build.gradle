@@ -29,7 +29,10 @@ dependencies {
     compile('org.springframework.boot:spring-boot-starter-web')
     compile('org.springframework.boot:spring-boot-starter-thymeleaf')
     compile('org.springframework.boot:spring-boot-devtools')
-    compile('com.navercorp.arcus:arcus-java-client:1.11.4')
+    compile('com.navercorp.arcus:arcus-java-client:1.11.4') {
+        exclude group: 'org.apache.zookeeper', module: 'zookeeper'
+    }
+    compile('org.apache.zookeeper:zookeeper:3.4.13')
     testCompile('org.springframework.boot:spring-boot-starter-test')
 }
 
