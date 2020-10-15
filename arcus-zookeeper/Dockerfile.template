@@ -1,7 +1,7 @@
 FROM centos:7
 
-ARG ZOOKEEPER_REPOSITORY=http://archive.apache.org/dist/zookeeper/zookeeper-${ARCUS_ZOOKEEPER_VERSION}/apache-zookeeper-${ARCUS_ZOOKEEPER_VERSION}.tar.gz
-ARG ZOOKEEPER_FILE=zookeeper-${ARCUS_ZOOKEEPER_VERSION}.tar.gz
+ARG ZOOKEEPER_FILE=apache-zookeeper-${ARCUS_ZOOKEEPER_VERSION}.tar.gz
+ARG ZOOKEEPER_REPOSITORY=http://archive.apache.org/dist/zookeeper/zookeeper-${ARCUS_ZOOKEEPER_VERSION}/${ZOOKEEPER_FILE}
 
 RUN yum update -y; \
     yum install -y \
