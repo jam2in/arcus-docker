@@ -9,7 +9,7 @@ data:
     set -e
 
     # no need to edit
-    ZK_CLI="$ZOOKEEPER_PATH/bin/zkCli.sh"
+    ZK_CLI="$ZOOKEEPER_DIR/bin/zkCli.sh"
 
     # edit your zk address
     ZK_ADDR="-server arcus-zk-1.arcus-zk-svc.default.svc.cluster.local:2181"

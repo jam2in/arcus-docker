@@ -20,8 +20,8 @@ data:
 
     set -e
 
-    ZOOKEEPER_CONF=$ZOOKEEPER_PATH/conf/zoo.cfg
-    ZOOKEEPER_DATA=$ZOOKEEPER_PATH/data/myid
+    ZOOKEEPER_CONF=$ZOOKEEPER_DIR/conf/zoo.cfg
+    ZOOKEEPER_DATA=$ZOOKEEPER_DIR/data/myid
 
     HOST_NAME_SHORT=`hostname -s`
     HOST_NAME_DOMAIN=`hostname -d`
@@ -31,13 +31,13 @@ data:
     fi
 
     function create_config() {
-        mkdir -p $ZOOKEEPER_PATH/conf
+        mkdir -p $ZOOKEEPER_DIR/conf
         rm -f $ZOOKEEPER_CONF
         echo "maxClientCnxns=$ZOOKEEPER_CONF_MAX_CLIENT_CNXNS"       >> $ZOOKEEPER_CONF
         echo "tickTime=$ZOOKEEPER_CONF_TICK_TIME"                    >> $ZOOKEEPER_CONF
         echo "initLimit=$ZOOKEEPER_CONF_INIT_LIMIT"                  >> $ZOOKEEPER_CONF
         echo "syncLimit=$ZOOKEEPER_CONF_SYNC_LIMIT"                  >> $ZOOKEEPER_CONF
-        echo "dataDir=$ZOOKEEPER_PATH/data"                          >> $ZOOKEEPER_CONF
+        echo "dataDir=$ZOOKEEPER_DIR/data"                          >> $ZOOKEEPER_CONF
         echo "clientPort=$ZOOKEEPER_CONF_CLIENT_PORT"                >> $ZOOKEEPER_CONF
         echo "minSessionTimeout=$ZOOKEEPER_CONF_MIN_SESSION_TIMEOUT" >> $ZOOKEEPER_CONF
         echo "maxSessionTimeout=$ZOOKEEPER_CONF_MAX_SESSION_TIMEOUT" >> $ZOOKEEPER_CONF
@@ -49,7 +49,7 @@ data:
     }
 
     function create_data() {
-        mkdir -p $ZOOKEEPER_PATH/data
+        mkdir -p $ZOOKEEPER_DIR/data
         echo "$((HOST_ORG+1))" > $ZOOKEEPER_DATA
     }
 
@@ -107,7 +107,7 @@ spec:
         imagePullPolicy: Always
         image: jam2in/arcus:latest
         command: ["/bin/sh"]
-        args: ["-c", "/scripts/arcus-zk-conf-init.sh && $ZOOKEEPER_PATH/bin/zkServer.sh start-foreground"]
+        args: ["-c", "/scripts/arcus-zk-conf-init.sh && $ZOOKEEPER_DIR/bin/zkServer.sh start-foreground"]
         ports:
         - containerPort: 2181
           name: client
