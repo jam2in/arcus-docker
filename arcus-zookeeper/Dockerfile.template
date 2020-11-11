@@ -1,6 +1,6 @@
 FROM centos:7
 
-ARG ZOOKEEPER_FILE=apache-zookeeper-${ARCUS_ZOOKEEPER_VERSION}.tar.gz
+ARG ZOOKEEPER_FILE=apache-zookeeper-${ARCUS_ZOOKEEPER_VERSION}-bin.tar.gz
 ARG ZOOKEEPER_REPOSITORY=http://archive.apache.org/dist/zookeeper/zookeeper-${ARCUS_ZOOKEEPER_VERSION}/${ZOOKEEPER_FILE}
 
 RUN yum update -y; \
@@ -11,7 +11,7 @@ RUN yum update -y; \
         telnet
 
 ENV ZOOKEEPER_USER     zookeeper
-ENV ZOOKEEPER_DIR      /zookeeper-${ARCUS_ZOOKEEPER_VERSION}
+ENV ZOOKEEPER_DIR      /apache-zookeeper-${ARCUS_ZOOKEEPER_VERSION}
 ENV ZOOKEEPER_CONF_DIR $ZOOKEEPER_DIR/conf
 ENV ZOOKEEPER_DATA_DIR $ZOOKEEPER_DIR/data
 ENV ZOOCFGDIR          $ZOOKEEPER_CONF_DIR
@@ -21,6 +21,7 @@ RUN set -ex; \
     adduser "$ZOOKEEPER_USER"; \
     curl -O "$ZOOKEEPER_REPOSITORY"; \
     tar -xzf "$ZOOKEEPER_FILE"; \
+    mv "apache-zookeeper-${ARCUS_ZOOKEEPER_VERSION}-bin" "apache-zookeeper-${ARCUS_ZOOKEEPER_VERSION}"; \
     mkdir -p "$ZOOKEEPER_CONF_DIR" "$ZOOKEEPER_DATA_DIR"; \
     chown -R "$ZOOKEEPER_USER:$ZOOKEEPER_USER" "$ZOOKEEPER_DIR" "$ZOOKEEPER_CONF_DIR" "$ZOOKEEPER_DATA_DIR"; \
     rm -f "$ZOOKEEPER_FILE";

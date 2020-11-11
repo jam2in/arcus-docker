@@ -21,6 +21,7 @@ data:
     set -e
 
     ZOOKEEPER_CONF=$ZOOKEEPER_DIR/conf/zoo.cfg
+    ZOOKEEPER_DYNAMIC_CONF=$ZOOKEEPER_DIR/conf/zoo.cfg.dynamic
     ZOOKEEPER_DATA=$ZOOKEEPER_DIR/data/myid
 
     HOST_NAME_SHORT=`hostname -s`
@@ -41,10 +42,13 @@ data:
         echo "clientPort=$ZOOKEEPER_CONF_CLIENT_PORT"                >> $ZOOKEEPER_CONF
         echo "minSessionTimeout=$ZOOKEEPER_CONF_MIN_SESSION_TIMEOUT" >> $ZOOKEEPER_CONF
         echo "maxSessionTimeout=$ZOOKEEPER_CONF_MAX_SESSION_TIMEOUT" >> $ZOOKEEPER_CONF
+        #echo "standaloneEnabled=false" >> $ZOOKEEPER_CONF
+        echo "reconfigEnabled=true" >> $ZOOKEEPER_CONF
+        echo "4lw.commands.whitelist=*" >> $ZOOKEEPER_CONF
 
         for (( i=0; i<$ZOOKEEPER_CONF_SERVERS; i++ ))
         do
-            echo "server.$((i+1))=$HOST_NAME-$i.$HOST_NAME_DOMAIN:$ZOOKEEPER_CONF_SERVER_PORT:$ZOOKEEPER_CONF_LEADER_ELECTION_PORT" >> $ZOOKEEPER_CONF
+        echo "server.$((i+1))=$HOST_NAME-$i.$HOST_NAME_DOMAIN:$ZOOKEEPER_CONF_SERVER_PORT:$ZOOKEEPER_CONF_LEADER_ELECTION_PORT:participant;$ZOOKEEPER_CONF_CLIENT_PORT" >> $ZOOKEEPER_DYNAMIC_CONF
         done
     }
 
@@ -105,7 +109,7 @@ spec:
       containers:
       - name: arcus-zk
         imagePullPolicy: Always
-        image: jam2in/arcus:latest
+        image: jam2in/arcus-zookeeper:3.5.8
         command: ["/bin/sh"]
         args: ["-c", "/scripts/arcus-zk-conf-init.sh && $ZOOKEEPER_DIR/bin/zkServer.sh start-foreground"]
         ports:
