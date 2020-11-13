@@ -33,6 +33,9 @@ ENV PATH          $PATH:$ZOOKEEPER_DIR/bin:$MEMCACHED_DIR
 RUN set -ex; \
     adduser "$ARCUS_USER"; \
     git clone $ARCUS_REPOSITORY; \
+    pushd arcus; \
+    git checkout bspark/zk-3.5.8; \
+    popd; \
     $ARCUS_DIR/scripts/build.sh; \
     chown -R "$ARCUS_USER:$ARCUS_USER" "$ARCUS_DIR"
 

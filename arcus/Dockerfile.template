@@ -35,13 +35,3 @@ RUN set -ex; \
     git clone $ARCUS_REPOSITORY; \
     $ARCUS_DIR/scripts/build.sh; \
     chown -R "$ARCUS_USER:$ARCUS_USER" "$ARCUS_DIR"
-
-RUN set -ex; \
-    git clone $MEMCACHED_REPOSITORY; \
-    pushd $MEMCACHED_DIR; \
-    git checkout ${ARCUS_MEMCACHED_VERSION}; \
-    config/autorun.sh; \
-    ./configure --enable-zk-integration --with-libevent=$ARCUS_DIR --with-zookeeper=$ARCUS_DIR; \
-    make; \
-    popd; \
-    chown -R "$ARCUS_USER:$ARCUS_USER" "$MEMCACHED_DIR"
