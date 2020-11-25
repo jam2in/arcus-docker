@@ -18,46 +18,59 @@ data:
   arcus-zk-conf-init.sh: |
     #!/bin/bash
 
-    set -e
+    set -ex
 
-    ZOOKEEPER_CONF=$ZOOKEEPER_DIR/conf/zoo.cfg
-    ZOOKEEPER_DYNAMIC_CONF=$ZOOKEEPER_DIR/conf/zoo.cfg.dynamic
-    ZOOKEEPER_DATA=$ZOOKEEPER_DIR/data/myid
+    ZOOKEEPER_DATA_DIR=/data
+    ZOOKEEPER_CONF_FILE=$ZOOKEEPER_CONF_DIR/zoo.cfg
+    ZOOKEEPER_DYNAMIC_CONF_FILE=$ZOOKEEPER_CONF_DIR/zoo.cfg.dynamic
+    ZOOKEEPER_MYID_FILE=$ZOOKEEPER_DATA_DIR/myid
 
-    HOST_NAME_SHORT=`hostname -s`
-    HOST_NAME_DOMAIN=`hostname -d`
-    if [[ $HOST_NAME_SHORT =~ (.*)-([0-9]+)$ ]]; then
-        HOST_NAME=${BASH_REMATCH[1]}
-        HOST_ORG=${BASH_REMATCH[2]}
+    HOST_SHORT_NAME=`hostname -s`
+    HOST_DOMAIN_NAME=`hostname -d`
+    if [[ $HOST_SHORT_NAME =~ (.*)-([0-9])$ ]]; then
+      HOST_NAME=${BASH_REMATCH[1]}
+      HOST_ORG=${BASH_REMATCH[2]}
     fi
 
     function create_config() {
         mkdir -p $ZOOKEEPER_DIR/conf
         rm -f $ZOOKEEPER_CONF
-        echo "maxClientCnxns=$ZOOKEEPER_CONF_MAX_CLIENT_CNXNS"       >> $ZOOKEEPER_CONF
-        echo "tickTime=$ZOOKEEPER_CONF_TICK_TIME"                    >> $ZOOKEEPER_CONF
-        echo "initLimit=$ZOOKEEPER_CONF_INIT_LIMIT"                  >> $ZOOKEEPER_CONF
-        echo "syncLimit=$ZOOKEEPER_CONF_SYNC_LIMIT"                  >> $ZOOKEEPER_CONF
-        echo "dataDir=$ZOOKEEPER_DIR/data"                          >> $ZOOKEEPER_CONF
-        echo "clientPort=$ZOOKEEPER_CONF_CLIENT_PORT"                >> $ZOOKEEPER_CONF
-        echo "minSessionTimeout=$ZOOKEEPER_CONF_MIN_SESSION_TIMEOUT" >> $ZOOKEEPER_CONF
-        echo "maxSessionTimeout=$ZOOKEEPER_CONF_MAX_SESSION_TIMEOUT" >> $ZOOKEEPER_CONF
-        #echo "standaloneEnabled=false" >> $ZOOKEEPER_CONF
-        echo "reconfigEnabled=true" >> $ZOOKEEPER_CONF
-        echo "4lw.commands.whitelist=*" >> $ZOOKEEPER_CONF
+        rm -f $ZOOKEEPER_DYNAMIC_CONF
 
-        for (( i=0; i<$ZOOKEEPER_CONF_SERVERS; i++ ))
+        echo "maxClientCnxns=$ZOOKEEPER_MAX_CLIENT_CNXNS" >> $ZOOKEEPER_CONF_FILE
+        echo "tickTime=$ZOOKEEPER_TICK_TIME" >> $ZOOKEEPER_CONF_FILE
+        echo "initLimit=$ZOOKEEPER_INIT_LIMIT" >> $ZOOKEEPER_CONF_FILE
+        echo "syncLimit=$ZOOKEEPER_SYNC_LIMIT" >> $ZOOKEEPER_CONF_FILE
+        echo "minSessionTimeout=$ZOOKEEPER_MIN_SESSION_TIMEOUT" >> $ZOOKEEPER_CONF_FILE
+        echo "maxSessionTimeout=$ZOOKEEPER_MAX_SESSION_TIMEOUT" >> $ZOOKEEPER_CONF_FILE
+        echo "clientPort= $ZOOKEEPER_CONF_CLIENT_PORT" >> $ZOOKEEPER_CONF_FILE
+        echo "dataDir=$ZOOKEEPER_DATA_DIR" >> $ZOOKEEPER_CONF_FILE
+
+        for (( i=0; i < util.Int32ToString(zookeeper.Spec.Replicas); i++ ))
         do
-        echo "server.$((i+1))=$HOST_NAME-$i.$HOST_NAME_DOMAIN:$ZOOKEEPER_CONF_SERVER_PORT:$ZOOKEEPER_CONF_LEADER_ELECTION_PORT:participant;$ZOOKEEPER_CONF_CLIENT_PORT" >> $ZOOKEEPER_DYNAMIC_CONF
+          if [ $i -eq $HOST_ORG ]; then
+          # Zookeeper UnknownHostException issue in Kubernetes
+          # https://github.com/kubernetes/contrib/issues/2737
+          # https://stackoverflow.com/questions/46605686/zookeeper-hostname-resolution-fails
+          # https://hub.docker.com/_/zookeeper?tab=description
+            SERVER_NAME = "$HOST_NAME-$i.$HOST_NAME_DOMAIN"
+            SERVER_STRING= "$SERVER_NAME:$ZOOKEEPER_SERVER_PORT:$ZOOKEEPER_CONF_LEADER_ELECTION_PORT:participant;$SERVER_NAME:"
+            echo server.$((i1))=  "$SERVER_NAME:$ZOOKEEPER_CONF_SERVER_PORT:$ZOOKEEPER_CONF_LEADER_ELECTION_PORT:participant;$SERVER_NAME:$ZOOKEEPER_CONF_CLIENT_PORT$  >> $ZOOKEEPER_DYNAMIC_CONF_FILE"
+          else
+            echo server.$((i1))=  "0.0.0.0:$ZOOKEEPER_CONF_SERVER_PORT:$ZOOKEEPER_CONF_LEADER_ELECTION_PORT:participant;0.0.0.0:$ZOOKEEPER_CONF_CLIENT_PORT$  >> $ZOOKEEPER_DYNAMIC_CONF_FILE"
+          fi
         done
+        chown $ZOOKEEPER_USER:$ZOOKEEPER_USER $ZOOKEEPER_CONF_FILE
     }
 
-    function create_data() {
-        mkdir -p $ZOOKEEPER_DIR/data
-        echo "$((HOST_ORG+1))" > $ZOOKEEPER_DATA
+    function create_myid() {
+      mkdir -p $ZOOKEEPER_DATA_DIR
+      echo $((HOST_ORG1)) > $ZOOKEEPER_MYID_FILE
+      chown $ZOOKEEPER_USER:$ZOOKEEPER_USER $ZOOKEEPER_MYID_FILE
     }
 
-    create_config && create_data
+    create_config && create_myid
+
   arcus-zk-ok.sh: |
     #!/bin/bash
 
